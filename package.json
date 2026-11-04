@@ -1,0 +1,15 @@
+{
+  "name": "cognita",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cognita: AI career navigation website for students (Netlify + OpenAI + Notion).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "e2e": "node e2e/run.mjs"
+  }
+}

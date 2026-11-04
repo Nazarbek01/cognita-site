@@ -1,0 +1,105 @@
+/* Cognita design tokens, three layers (design-system skill):
+   1. PRIMITIVE  raw values, named by what they are. Only this file may contain hex colours.
+   2. SEMANTIC   what a value is FOR. Components use these.
+   3. COMPONENT  per-component choices built from semantic tokens.
+   Visual language comes from the team's presentation decks: blue-to-violet gradient, pale gradient pages,
+   white cards with a coloured top bar, tinted pills, Inter ExtraBold headings. */
+
+@font-face{font-family:Inter;font-weight:400;font-style:normal;font-display:swap;src:url(../fonts/inter-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:500;font-style:normal;font-display:swap;src:url(../fonts/inter-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:600;font-style:normal;font-display:swap;src:url(../fonts/inter-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:700;font-style:normal;font-display:swap;src:url(../fonts/inter-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:800;font-style:normal;font-display:swap;src:url(../fonts/inter-latin-800-normal.woff2) format("woff2")}
+
+:root{
+  color-scheme:light;
+
+  /* ---------- 1. PRIMITIVE ---------- */
+  --p-white:#FFFFFF;
+  --p-navy-900:#0F1B3D;
+  --p-ink-900:#0F172A;
+  --p-ink-800:#1E293B;
+  --p-slate-700:#334155;
+  --p-slate-600:#475569;
+  --p-slate-500:#64748B;
+  --p-slate-400:#94A3B8;
+  --p-slate-300:#CBD5E1;
+  --p-slate-200:#E2E8F0;
+  --p-slate-100:#F1F5F9;
+  --p-slate-50:#F8FAFC;
+  --p-page:#F8F8FF;
+
+  --p-blue-500:#2563FF;  --p-blue-400:#4F8DFF;  --p-blue-700:#1D4ED8;  --p-blue-900:#1E3A8A;
+  --p-blue-25:#F2F6FF; --p-indigo-500:#5B5BF5; --p-blue-100:#E5ECFF;  --p-blue-50:#E6F1FF;   --p-blue-300:#7FA6E6;  --p-blue-200:#DCE9FF;
+  --p-violet-500:#8B4DFF; --p-violet-600:#6D4DF0; --p-violet-700:#6D28D9; --p-violet-100:#EFE6FF; --p-violet-200:#EADFFF; --p-violet-300:#C4B5FD;
+  --p-pink-500:#FF4DA6;  --p-pink-700:#BE185D;  --p-pink-100:#FFE5F1;
+  --p-cyan-500:#00B8E6;  --p-cyan-700:#0E7490;  --p-cyan-100:#D9F6FF;
+  --p-orange-500:#FF9933; --p-orange-700:#C2600A; --p-orange-800:#9A4A00; --p-orange-100:#FFEAD3;
+  --p-green-600:#16A34A; --p-green-700:#15803D; --p-green-100:#DCF5E5; --p-green-300:#9AD8B3;
+  --p-lime-100:#F0FBD2;  --p-lime-300:#B7E04F;  --p-lime-900:#27410A;
+  --p-periwinkle-200:#CFE0FF; --p-periwinkle-100:#DCE5FF;
+
+  --p-page-blue:#E2F2FF; --p-page-periwinkle:#E6EEFF; --p-page-orchid:#F0E8FF; --p-page-blush:#FFE8F3; --p-page-violet:#EFE7FF; --p-page-rose:#FFEDEB; --p-page-pink:#FFE9F3; --p-page-sky:#DDF3FF; --p-page-indigo:#E6ECFF; --p-page-lilac:#F2E9FF; --p-page-sand:#FFEFD9; --p-page-mint:#DDF6FF;
+
+  --p-font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --p-radius-xs:4px; --p-radius-sm:8px; --p-radius-md:12px; --p-radius-lg:14px; --p-radius-xl:18px; --p-radius-2xl:24px; --p-radius-3xl:34px; --p-radius-pill:999px;
+  --p-shadow-card:0 10px 30px rgba(15,23,42,.06),0 0 0 1px rgba(226,232,240,.9);
+  --p-shadow-row:0 8px 24px rgba(15,23,42,.05),0 0 0 1px rgba(226,232,240,.9);
+  --p-shadow-glow:0 18px 40px rgba(37,99,255,.25);
+  --p-shadow-pop:0 18px 50px rgba(15,23,42,.1),0 0 0 1px rgba(226,232,240,1);
+  --p-shadow-device:0 26px 60px rgba(6,12,45,.38);
+  --p-ease:cubic-bezier(.2,.7,.2,1);
+
+  /* ---------- 2. SEMANTIC ---------- */
+  --font:var(--p-font);
+  --color-text:var(--p-ink-900);
+  --color-text-soft:var(--p-slate-600);
+  --color-text-strong-soft:var(--p-slate-700);
+  --color-text-muted:var(--p-slate-500);
+  --color-border:var(--p-slate-200);
+  --color-surface:var(--p-white);
+  --color-surface-sunken:var(--p-slate-50);
+  --color-surface-quiet:var(--p-slate-100);
+  --color-page:var(--p-page);
+  --color-on-brand:var(--p-white);
+  --color-on-brand-soft:var(--p-periwinkle-100);
+  --color-on-brand-label:var(--p-periwinkle-200);
+
+  --color-primary:var(--p-blue-500);       --color-primary-deep:var(--p-blue-700);   --color-primary-tint:var(--p-blue-100);
+  --color-accent:var(--p-violet-500);      --color-accent-deep:var(--p-violet-700);  --color-accent-tint:var(--p-violet-100);
+  --color-highlight:var(--p-pink-500);     --color-highlight-deep:var(--p-pink-700); --color-highlight-tint:var(--p-pink-100);
+  --color-info:var(--p-cyan-500);          --color-info-deep:var(--p-cyan-700);      --color-info-tint:var(--p-cyan-100);
+  --color-warn:var(--p-orange-500);        --color-warn-deep:var(--p-orange-800);    --color-warn-tint:var(--p-orange-100);
+  --color-success:var(--p-green-600);      --color-success-deep:var(--p-green-700);  --color-success-tint:var(--p-green-100);
+  --color-nav:var(--p-ink-900);            --color-nav-hover:var(--p-ink-800);       --color-nav-text:var(--p-slate-300);
+
+  --gradient-brand:linear-gradient(135deg,var(--p-navy-900) 0%,var(--p-blue-500) 55%,var(--p-violet-500) 100%);
+  --gradient-action:linear-gradient(135deg,var(--p-blue-500),var(--p-violet-500));
+  --gradient-route:linear-gradient(135deg,var(--p-blue-700),var(--p-blue-500) 60%,var(--p-indigo-500));
+  --gradient-logo:linear-gradient(135deg,var(--p-blue-400),var(--p-blue-500) 60%,var(--p-violet-600));
+  --gradient-soft:linear-gradient(135deg,var(--p-blue-200),var(--p-violet-200));
+  --gradient-warn-bar:linear-gradient(90deg,var(--p-orange-500),var(--p-pink-500));
+
+  --page-a:var(--p-page-blue); --page-b:var(--p-page-violet); --page-c:var(--p-page-rose);
+
+  --focus-ring:3px solid var(--color-primary);
+  --shadow-card:var(--p-shadow-card);
+  --shadow-row:var(--p-shadow-row);
+  --shadow-glow:var(--p-shadow-glow);
+  --shadow-action:0 8px 20px rgba(37,99,255,.28);
+  --veil-1:rgba(255,255,255,.14);
+  --veil-2:rgba(255,255,255,.18);
+  --veil-3:rgba(255,255,255,.3);
+  --veil-4:rgba(255,255,255,.65);
+
+  /* ---------- 3. COMPONENT ---------- */
+  --button-radius:var(--p-radius-lg);
+  --button-pad:13px 22px;
+  --card-radius:var(--p-radius-2xl);
+  --card-pad:28px 26px 24px;
+  --card-bar:5px;
+  --chip-radius:var(--p-radius-pill);
+  --input-radius:var(--p-radius-lg);
+  --input-border:var(--color-border);
+  --content-max:1160px;
+}

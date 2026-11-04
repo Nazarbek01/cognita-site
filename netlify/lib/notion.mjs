@@ -4,6 +4,8 @@
 
 import { randomInt } from 'node:crypto';
 import { fetchTimeout } from './http.mjs';
+import { FIELD_BY_ID } from '../../public/shared/careers.mjs';
+import { GOALS } from '../../public/shared/config.mjs';
 
 const VERSION = '2022-06-28';
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // no 0/O, 1/I/L
@@ -40,6 +42,14 @@ async function call(env, fetchFn, path, method, body) {
   return res.json();
 }
 
+// The results database was made for students ("Grade", "Subjects"). For the professional path the same
+// columns hold the work details, so the database needs no new columns.
+const isPro = p => p && p.mode === 'pro';
+const who = p => (isPro(p) ? `Professional · ${p.exp} · ${p.edu}` : p.grade);
+const background = p => (isPro(p)
+  ? `Field: ${p.field === 'other' ? 'Other' : FIELD_BY_ID[p.field].name} · Goal: ${GOALS.find(g => g.id === p.goal).name}`
+  : p.subjects.join(', '));
+
 /** Store one finished result. Returns the private code. No name, e-mail or free text is stored. */
 export async function saveResult(env, fetchFn, { result, answers, consent }) {
   const code = makeCode();
@@ -49,8 +59,8 @@ export async function saveResult(env, fetchFn, { result, answers, consent }) {
     'Top career': text(top.id),
     'Top match': { number: top.match },
     'Source': { select: { name: result.source === 'ai' ? 'AI' : 'Rules fallback' } },
-    'Grade': text(result.profile.grade),
-    'Subjects': text(result.profile.subjects.join(', ')),
+    'Grade': text(who(result.profile)),
+    'Subjects': text(background(result.profile)),
     'Skills': text(result.profile.skills.join(', ')),
     'Answers': text(answers.join('')),
     'Area scores': text(JSON.stringify(result.areas)),

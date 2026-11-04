@@ -5,9 +5,10 @@
 import * as store from './store.js';
 import * as api from './api.js';
 import * as V from './views.js';
-import { CAREER_BY_ID } from '../../shared/careers.mjs';
-import { rulesResult, validateInput, looksLikeResult } from '../../shared/engine.mjs';
-import { LIMITS } from '../../shared/config.mjs';
+import { CAREER_BY_ID, FIELD_BY_ID } from '../../shared/careers.mjs';
+import { rulesResult, validateInput, looksLikeResult, scoreAreas, isFlat, modeOf } from '../../shared/engine.mjs';
+import { LIMITS, MODES } from '../../shared/config.mjs';
+import { STARTER_IDS } from '../../shared/skills.mjs';
 
 let S = store.load();
 const app = document.getElementById('app');
@@ -27,6 +28,9 @@ let runId = 0;        // bumps whenever the analysis screen is left, so a late a
 let sel = null;       // selected roadmap step
 let openMsg = '', openBusy = false, openValue = '';
 let startErr = false;
+let flatAsk = false;  // the "your answers are almost all the same" question on the last statement
+let flatOk = false;   // the person chose to see matches anyway
+const ex = { q: '', f: '' };   // careers explorer: search text and field filter
 let advance = 0;      // timer for auto-advance on the test screen
 let pendingAt = -1;   // statement that is waiting for that timer, or -1
 
@@ -49,17 +53,24 @@ function route() {
 const go = to => { if (getHash() === '#' + to) render(); else setHash(to); };
 const firstUnanswered = () => S.answers.findIndex(a => a === null);
 const allAnswered = () => firstUnanswered() === -1;
-const profileInput = () => ({ grade: S.profile.grade, subjects: S.profile.subjects.slice(), skills: S.profile.skills.slice() });
+/** The profile part of the request, for the chosen path only. */
+function profileInput() {
+  const p = S.profile;
+  if (modeOf(p) === 'pro') return { mode: 'pro', field: p.field, exp: p.exp, edu: p.edu, goal: p.goal, skills: p.skills.slice() };
+  return { mode: 'student', grade: p.grade, subjects: p.subjects.slice(), skills: p.skills.filter(id => STARTER_IDS.includes(id)) };
+}
+const sameProfile = (a, b) => {
+  const norm = p => JSON.stringify(Object.keys(p).sort().map(k => [k, Array.isArray(p[k]) ? [...p[k]].sort() : p[k]]));
+  return norm({ mode: 'student', ...a }) === norm({ mode: 'student', ...b });
+};
 
 /** True if the saved result already matches the current answers, profile and AI choice. */
 function resultIsCurrent() {
   const r = S.result;
   if (!r || !r.answers || r.where === 'device') return false;
   const sameAnswers = r.answers.length === 30 && r.answers.every((a, i) => a === S.answers[i]);
-  const p = r.profile, q = profileInput();
-  const sameProfile = p.grade === q.grade && [...p.subjects].sort().join() === [...q.subjects].sort().join() && [...p.skills].sort().join() === [...q.skills].sort().join();
   const sameAi = (r.aiStatus === 'ok' && S.consent.ai) || (r.aiStatus === 'off' && !S.consent.ai);
-  return sameAnswers && sameProfile && sameAi;
+  return sameAnswers && sameProfile(r.profile, profileInput()) && sameAi;
 }
 
 /* ---------- rendering ---------- */
@@ -69,7 +80,7 @@ const NEEDS_RESULT = new Set(['results', 'why', 'delay']);
 
 function titleFor(name, arg) {
   const t = {
-    home: 'Cognita: AI career navigation for students', start: 'Get started', type: 'Your path', profile: 'Your studies',
+    home: 'Cognita: AI career navigation', start: 'Get started', type: 'Your path', profile: 'Your profile', careers: 'Explore careers',
     test: 'Assessment', analysis: 'Analysing your answers', delay: 'The AI is taking longer than usual', results: 'Your career matches',
     dashboard: 'Dashboard', roadmap: 'My roadmap', open: 'Open a saved result', privacy: 'Privacy Notice', career: 'Career details', why: 'Why it fits',
   }[name] || 'Page not found';
@@ -82,9 +93,10 @@ function view(name, arg, q) {
   switch (name) {
     case 'home': return V.home(S);
     case 'start': return V.start(S, startErr);
-    case 'type': return V.type();
+    case 'type': return V.type(S);
+    case 'careers': return V.careers(S, ex);
     case 'profile': return V.profile(S);
-    case 'test': return V.test(S);
+    case 'test': return V.test(S, flatAsk);
     case 'analysis': return V.analysis(S);
     case 'delay': return V.delay(S);
     case 'results': return V.results(S);
@@ -105,7 +117,7 @@ function render(fresh = true) {
   let arg = parts[1];
 
   if (name === 'r' && arg) { name = 'open'; openValue = arg; }       // /r/<CODE> deep link
-  if (fresh) { runId++; clearTimeout(advance); pendingAt = -1; }
+  if (fresh) { runId++; clearTimeout(advance); pendingAt = -1; if (name !== 'test') flatAsk = false; }
 
   // guards: send people to the step they are missing instead of showing a broken screen
   let redirect = null;
@@ -124,6 +136,10 @@ function render(fresh = true) {
   if (name === 'test' && fresh) {
     if (S.q < 0 || S.q > 29) S.q = 0;
   }
+  if (name === 'careers' && fresh) {
+    const f = q.get('f') || '';
+    ex.f = FIELD_BY_ID[f] ? f : '';
+  }
   if (name === 'roadmap' && arg) S.focus = arg;
   if (name === 'career' && arg && S.result) S.focus = arg;
 
@@ -133,6 +149,7 @@ function render(fresh = true) {
 
   const y = fresh ? 0 : window.scrollY;
   document.body.dataset.screen = screen;
+  document.body.classList.toggle('hastab', ['dashboard', 'career', 'roadmap'].includes(screen));
   document.title = titleFor(screen === 'notfound' ? 'x' : name, arg);
   app.innerHTML = html;
   window.scrollTo(0, y);
@@ -244,7 +261,7 @@ async function submitCode(text) {
     const r = res.result;
     if (!looksLikeResult(r) || !Array.isArray(r.answers) || r.answers.length !== 30) throw new Error('That saved result could not be read.');
     S.answers = r.answers.slice();
-    S.profile = { ...S.profile, grade: r.profile.grade, subjects: (r.profile.subjects || []).slice(), skills: r.profile.skills.slice(), note: '' };
+    S.profile = { ...S.profile, ...r.profile, mode: modeOf(r.profile), subjects: (r.profile.subjects || S.profile.subjects).slice(), skills: r.profile.skills.slice(), note: '' };
     S.result = r; S.code = code; S.saveStatus = 'saved'; S.focus = r.matches[0].id; S.q = 0;
     persist();
     openBusy = false; openMsg = '';
@@ -301,7 +318,28 @@ const ACTIONS = {
   },
   finish() {
     persist();
+    if (!flatOk && isFlat(scoreAreas(S.answers))) { flatAsk = true; refresh('[data-act=review]'); return; }
     go(resultIsCurrent() ? '/results' : '/analysis');
+  },
+  finishAnyway() { flatAsk = false; flatOk = true; ACTIONS.finish(); },
+  review() { flatAsk = false; S.q = 0; persist(); refresh(); focusScale(); },
+  pickPath(el) {
+    S.profile.mode = el.dataset.mode; persist();
+    go(S.consent.privacy ? '/profile' : '/start');
+  },
+  mode(el) {
+    if (!MODES.includes(el.dataset.mode)) return;
+    S.profile.mode = el.dataset.mode; persist();
+    refresh(`[data-act=mode][data-mode=${el.dataset.mode}]`);
+  },
+  goal(el) {
+    S.profile.goal = el.dataset.id; persist();
+    refresh(`[data-act=goal][data-id=${el.dataset.id}]`);
+  },
+  field(el) {
+    ex.f = FIELD_BY_ID[el.dataset.id] ? el.dataset.id : '';
+    if (!MEMORY) history.replaceState(null, '', '#/careers' + (ex.f ? '?f=' + ex.f : ''));
+    refresh(`[data-act=field][data-id="${ex.f}"]`);
   },
   tryAi() { go('/analysis'); },
   adjust() { S.q = 0; persist(); go('/test'); },
@@ -353,6 +391,7 @@ function answer(v, viaKey = false) {
     pendingAt = -1;
   }
   S.answers[S.q] = v;
+  flatAsk = false; flatOk = false;
   persist();
   refresh();
   focusScale();
@@ -392,6 +431,13 @@ function onField(e) {
   if (!t.dataset || !t.dataset.f) return;
   if (t.dataset.f === 'name') S.name = t.value.slice(0, 30);
   else if (t.dataset.f === 'grade') S.profile.grade = t.value;
+  else if (['field', 'exp', 'edu'].includes(t.dataset.f)) S.profile[t.dataset.f] = t.value;
+  else if (t.dataset.f === 'search') {
+    ex.q = t.value.slice(0, 60);
+    const grid = document.getElementById('cgrid');
+    if (grid) grid.innerHTML = V.careerGrid(S, ex);
+    return;
+  }
   else if (t.dataset.f === 'note') {
     S.profile.note = t.value.slice(0, LIMITS.noteMax);
     const c = document.getElementById('note-count');

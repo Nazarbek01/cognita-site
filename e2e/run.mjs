@@ -56,7 +56,7 @@ async function look(page, name) {
   const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   check(`[${page.vp}] no sideways scroll on ${name}`, over <= 0, `overflow ${over}px`);
   const unnamed = await page.evaluate(() => [...document.querySelectorAll('button, a[href], input, select, textarea')]
-    .filter(el => !el.disabled && !(el.innerText || '').trim() && !el.getAttribute('aria-label') && !(el.labels && el.labels.length) && !el.getAttribute('aria-labelledby') && !el.placeholder)
+    .filter(el => !el.disabled && !(el.textContent || '').trim() && !el.getAttribute('aria-label') && !(el.labels && el.labels.length) && !el.getAttribute('aria-labelledby') && !el.placeholder)
     .map(el => el.outerHTML.slice(0, 80)));
   check(`[${page.vp}] every control has a name on ${name}`, unnamed.length === 0, unnamed.join(' | '));
   const h1 = await page.locator('h1').count();
@@ -65,13 +65,19 @@ async function look(page, name) {
 }
 
 const hash = page => page.evaluate(() => location.hash);
+async function imagesOk(page) {
+  await page.evaluate(async () => { for (const img of document.images) { img.loading = 'eager'; if (!img.complete) await new Promise(r => { img.onload = img.onerror = r; }); } });
+  return page.evaluate(() => [...document.images].filter(i => !i.naturalWidth).map(i => i.getAttribute('src')));
+}
+const fieldsOf = page => page.locator('.mcard .fld').allInnerTexts();
+const maxPerField = list => Math.max(...Object.values(list.reduce((o, f) => ({ ...o, [f]: (o[f] || 0) + 1 }), {})));
 async function goto(page, base, h) { await page.goto(base + '/' + (h || '')); await page.waitForTimeout(150); }
 
 /** Walk from the home page to the results screen. */
 async function runFlow(page, base, { name = 'Aigerim', ai = true, save = true, note = '', shots = false } = {}) {
   await goto(page, base, '');
-  if (shots) await look(page, 'home');
-  await page.click('.hero2 [data-go="/start"]');
+  if (shots) { await look(page, 'home'); check(`[${page.vp}] every picture on the home page loads`, (await imagesOk(page)).length === 0); }
+  await page.click('.hero .cta [data-go="/start"]');
   await page.waitForURL(/#\/start/);
   if (shots) await look(page, 'start');
   await page.fill('#f-name', name);
@@ -131,11 +137,14 @@ async function main() {
     await finishToResults(page);
     check(`[${vp}] AI flow ends on results`, (await hash(page)) === '#/results');
     await look(page, 'results');
-    check(`[${vp}] five matches shown`, (await page.locator('.mrow').count()) === 5);
-    check(`[${vp}] AI chip shown`, await page.locator('.chip.ai', { hasText: 'AI-generated' }).first().isVisible());
+    check(`[${vp}] five matches shown`, (await page.locator('.mcard').count()) === 5);
+    check(`[${vp}] at most two matches from one field`, maxPerField(await fieldsOf(page)) <= 2, (await fieldsOf(page)).join(', '));
+    check(`[${vp}] every picture on the results loads`, (await imagesOk(page)).length === 0);
+    check(`[${vp}] results say which path was used`, await page.locator('.chip', { hasText: 'Student path' }).isVisible());
+    check(`[${vp}] AI chip shown`, await page.locator('.chip.ai', { hasText: 'AI-explained' }).first().isVisible());
     const code = (await page.locator('#codeText').innerText()).trim();
     check(`[${vp}] private code shown and well formed`, /^COG-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code), code);
-    const top = (await page.locator('.mrow .nm').first().innerText()).trim();
+    const top = (await page.locator('.mcard .nm').first().innerText()).trim();
 
     // privacy: what really left the browser
     const log = await mockLog(A);
@@ -147,7 +156,7 @@ async function main() {
     check(`[${vp}] Notion never gets the name or the note`, !/Aigerim|maps|aigerim@/.test(lastNotion));
 
     // why + feedback
-    await page.click('.mrow .nm >> nth=0');
+    await page.click('.mcard .nm >> nth=0');
     await page.waitForURL(/#\/why\//);
     await look(page, 'why');
     check(`[${vp}] why screen shows the AI explanation`, await page.locator('.aisum .chip.ai').isVisible());
@@ -211,13 +220,13 @@ async function main() {
     await page.fill('#f-code', code.toLowerCase().replace(/-/g, ' '));
     await page.click('form[data-form=code] button');
     await page.waitForURL(/#\/results/);
-    check(`[${vp}] saved result opens by code with the same top match`, (await page.locator('.mrow .nm').first().innerText()).trim() === top);
+    check(`[${vp}] saved result opens by code with the same top match`, (await page.locator('.mcard .nm').first().innerText()).trim() === top);
     await goto(page, A, '#/dashboard');
     check(`[${vp}] restored result has a working dashboard`, await page.locator('.rcard').isVisible());
     await page.click('[data-act=wipe]').catch(() => {});
     await goto(page, A, '#/r/' + code);
     await page.waitForURL(/#\/results/);
-    check(`[${vp}] deep link /r/CODE opens the result`, (await page.locator('.mrow').count()) === 5);
+    check(`[${vp}] deep link /r/CODE opens the result`, (await page.locator('.mcard').count()) === 5);
     await goto(page, A, '#/nope');
     check(`[${vp}] unknown page shows "Page not found"`, /Page not found/.test(await page.locator('h1').innerText()));
 
@@ -229,7 +238,7 @@ async function main() {
   {
     const page = await newPage(browser, 'web');
     await goto(page, A, '');
-    await page.click('.hero2 [data-go="/start"]');
+    await page.click('.hero .cta [data-go="/start"]');
     await page.click('[data-act=consent][data-k=privacy]');
     await page.click('[data-act=startNext]');
     await page.click('.btn.go[data-go="/profile"]');
@@ -266,7 +275,9 @@ async function main() {
     await page.click('.banner [data-act=tryAi]');
     await page.waitForURL(/#\/(delay|results)/, { timeout: 25000 });
     check('"Try the AI again" runs the analysis again', true);
-    await page.goto(T + '/#/why/data-analyst');
+    await page.goto(T + '/#/results');
+    await page.click('.mcard .nm >> nth=0');
+    await page.waitForURL(/#\/why\//);
     await page.waitForTimeout(300);
     const why = await page.locator('.aisum').innerText();
     check('a rules-only result has a plain explanation, not "AI explanation"', !/AI explanation/.test(why) && why.length > 20);
@@ -304,7 +315,7 @@ async function main() {
     const page = await newPage(browser, 'web');
     await runFlow(page, N, {});
     await finishToResults(page);
-    check('no Notion: results still arrive', (await page.locator('.mrow').count()) === 5);
+    check('no Notion: results still arrive', (await page.locator('.mcard').count()) === 5);
     check('no Notion: no private code is shown', (await page.locator('#codeText').count()) === 0);
     check('no Notion: student is told it was not saved', /not saved under a code/.test(await page.locator('main').innerText()));
     await page.context().close();
@@ -317,7 +328,7 @@ async function main() {
     await runFlow(page, A, {});
     await finishToResults(page);
     await look(page, 'results-device');
-    check('offline: results appear anyway', (await page.locator('.mrow').count()) === 5);
+    check('offline: results appear anyway', (await page.locator('.mcard').count()) === 5);
     check('offline: chip says "on this device"', await page.locator('.chip.dev', { hasText: 'Calculated on this device' }).isVisible());
     check('offline: banner explains', /Could not reach the server/.test(await page.locator('.banner').first().innerText()));
     check('offline: no code is shown', (await page.locator('#codeText').count()) === 0);
@@ -325,7 +336,7 @@ async function main() {
     await page.click('.banner [data-act=tryAi]');
     await page.waitForURL(/#\/results/, { timeout: 25000 });
     await page.waitForTimeout(400);
-    check('after the server is back, "Try again" gives an AI result with a code', await page.locator('.chip.ai', { hasText: 'AI-generated' }).first().isVisible() && await page.locator('#codeText').isVisible());
+    check('after the server is back, "Try again" gives an AI result with a code', await page.locator('.chip.ai', { hasText: 'AI-explained' }).first().isVisible() && await page.locator('#codeText').isVisible());
     await page.context().close();
   }
 
@@ -334,15 +345,117 @@ async function main() {
     const page = await newPage(browser, 'web');
     await runFlow(page, X, { name: '<img src=x onerror="window.__xss=1">' });
     await finishToResults(page);
-    await page.click('.mrow .nm >> nth=0');
+    await page.click('.mcard .nm >> nth=0');
     await page.waitForURL(/#\/why\//);
     await page.waitForTimeout(300);
-    const injected = await page.evaluate(() => ({ flag: window.__xss, imgs: document.querySelectorAll('#app img').length, bold: document.querySelectorAll('.aisum b').length }));
+    const injected = await page.evaluate(() => ({ flag: window.__xss, imgs: document.querySelectorAll('#app img[src="x"], #app img[onerror]').length, bold: document.querySelectorAll('.aisum b').length }));
     check('AI text with HTML is shown as text, not run', !injected.flag && injected.imgs === 0 && injected.bold === 0, JSON.stringify(injected));
     check('the AI text is visible literally', /<img/.test(await page.locator('.aisum p').innerText()));
     await goto(page, X, '#/dashboard');
-    const inj2 = await page.evaluate(() => ({ flag: window.__xss, imgs: document.querySelectorAll('#app img').length }));
+    const inj2 = await page.evaluate(() => ({ flag: window.__xss, imgs: document.querySelectorAll('#app img[src="x"], #app img[onerror]').length }));
     check('a hostile first name is shown as text', !inj2.flag && inj2.imgs === 0);
+    await page.context().close();
+  }
+
+  console.log('\n== Careers explorer (web and phone) ==');
+  for (const vp of ['web', 'mob']) {
+    const page = await newPage(browser, vp);
+    await goto(page, A, '#/careers');
+    await look(page, 'careers');
+    const total = await page.locator('.ccard').count();
+    check(`[${vp}] explorer lists every career`, total >= 100, String(total));
+    check(`[${vp}] every career picture loads`, (await imagesOk(page)).length === 0);
+    await page.fill('#f-search', 'doctor');
+    await page.waitForTimeout(150);
+    const names = await page.locator('.ccard b').allInnerTexts();
+    check(`[${vp}] search finds the doctor`, names.some(n => /Doctor/.test(n)) && names.length < total, names.join(', '));
+    check(`[${vp}] search keeps the focus in the box`, await page.evaluate(() => document.activeElement && document.activeElement.id === 'f-search'));
+    await page.fill('#f-search', 'zzzz');
+    await page.waitForTimeout(150);
+    check(`[${vp}] an empty search says so`, await page.locator('.empty').isVisible());
+    await page.fill('#f-search', '');
+    await page.click('[data-act=field][data-id=health]');
+    await page.waitForTimeout(200);
+    const health = await page.locator('.ccard').count();
+    check(`[${vp}] the field filter shows only that field`, health >= 5 && health < total && /Medicine/.test(await page.locator('h1').innerText()), String(health));
+    await page.click('.ccard >> nth=0');
+    await page.waitForURL(/#\/career\//);
+    await look(page, 'career-from-explorer');
+    check(`[${vp}] a career opens without taking the test`, (await page.locator('h1').innerText()).length > 2 && await page.locator('.skl span').count() > 2);
+    await goto(page, A, '#/careers?f=trades');
+    check(`[${vp}] a field link opens filtered`, /Skilled Trades/.test(await page.locator('h1').innerText()));
+    check(`[${vp}] no console errors (explorer)`, page.problems.length === 0, page.problems.join(' || '));
+    await page.context().close();
+  }
+
+  console.log('\n== Professional path ==');
+  {
+    const page = await newPage(browser, 'web');
+    await goto(page, A, '');
+    await page.click('[data-act=pickPath][data-mode=pro]');
+    await page.waitForURL(/#\/start/);
+    await page.click('[data-act=consent][data-k=privacy]');
+    await page.click('[data-act=startNext]');
+    await page.waitForURL(/#\/type/);
+    check('the professional path stays chosen', await page.waitForSelector('.opt.on[data-mode=pro]', { timeout: 3000 }).then(() => true, () => false));
+    await page.click('.btn.go[data-go="/profile"]');
+    await page.waitForURL(/#\/profile/);
+    await look(page, 'profile-pro');
+    check('professional profile asks about work, not school', await page.locator('#f-field').isVisible() && await page.locator('#f-grade').count() === 0);
+    await page.selectOption('#f-field', 'health');
+    await page.selectOption('#f-exp', '5–10 years');
+    await page.click('[data-act=goal][data-id=change]');
+    for (const id of ['sql', 'prog', 'excel']) await page.click(`[data-act=toggle][data-k=skill][data-id=${id}]`);
+    await page.click('[data-act=toTest]');
+    await page.waitForSelector('.q .sc');
+    const pattern = [3, 4, 2, 1, 0, 2];
+    for (let i = 0; i < 30; i++) { await page.keyboard.press(String(pattern[i % 6] + 1)); await page.waitForTimeout(290); }
+    await page.click('[data-act=finish]');
+    await finishToResults(page);
+    await look(page, 'results-pro');
+    check('professional results are labelled', await page.locator('.chip', { hasText: 'Professional path' }).isVisible());
+    const fields = await fieldsOf(page);
+    check('wanting a change keeps the current field out of the top', !fields.includes('Medicine & Health'), fields.join(', '));
+    check('professional results: at most two per field', maxPerField(fields) <= 2);
+    const log = await mockLog(A);
+    const sent = JSON.parse(log.openai.at(-1).body.messages[1].content);
+    check('the AI is told this is a professional', sent.person.path === 'professional' && sent.person.experience === '5–10 years', JSON.stringify(sent.person).slice(0, 160));
+    check('the AI gets at most 15 candidate careers', sent.careers.length <= 15);
+    const saved = log.notion.filter(n => n.body && n.body.properties && n.body.properties['Result code']).at(-1).body.properties;
+    check('Notion stores the professional details in the existing columns', /Professional · 5–10 years/.test(saved.Grade.rich_text[0].text.content) && /Goal: Move to a new field/.test(saved.Subjects.rich_text[0].text.content));
+    await page.click('.mcard .nm >> nth=0');
+    await page.waitForURL(/#\/why\//);
+    check('why screen explains the goal for professionals', /Your goal/.test(await page.locator('.facts-l').innerText()));
+    check('no console errors (professional)', page.problems.length === 0, page.problems.join(' || '));
+    await page.context().close();
+  }
+
+  console.log('\n== The same answer everywhere ==');
+  {
+    const page = await newPage(browser, 'web');
+    await goto(page, A, '');
+    await page.click('.hero .cta [data-go="/start"]');
+    await page.click('[data-act=consent][data-k=privacy]');
+    await page.click('[data-act=startNext]');
+    await page.click('.btn.go[data-go="/profile"]');
+    await page.click('[data-act=toTest]');
+    await page.waitForSelector('.q .sc');
+    for (let i = 0; i < 30; i++) { await page.keyboard.press('1'); await page.waitForTimeout(290); }
+    await page.click('[data-act=finish]');
+    await page.waitForTimeout(200);
+    check('same answers: a warning appears instead of results', await page.locator('.flatask').isVisible() && /#\/test/.test(await hash(page)));
+    await look(page, 'flat-warning');
+    await page.click('[data-act=review]');
+    await page.waitForTimeout(200);
+    check('"Review my answers" goes back to statement 1', /statement 1 of 30/i.test(await page.locator('.q .meta').innerText()));
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('cognita.v1')); s.q = 29; localStorage.setItem('cognita.v1', JSON.stringify(s)); });
+    await page.reload();
+    await page.waitForSelector('.q .sc');
+    await page.click('[data-act=finish]');
+    await page.click('[data-act=finishAnyway]');
+    await finishToResults(page);
+    check('"See matches anyway" shows results with a clear warning', /No clear preference/.test(await page.locator('main').innerText()));
+    check('no console errors (same answers)', page.problems.length === 0, page.problems.join(' || '));
     await page.context().close();
   }
 

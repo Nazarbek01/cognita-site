@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AREAS, SUBJECTS, GRADES } from '../public/shared/config.mjs';
 import { QUESTIONS } from '../public/shared/questions.mjs';
-import { CAREERS } from '../public/shared/careers.mjs';
-import { SKILLS, STARTER_IDS } from '../public/shared/skills.mjs';
+import { existsSync } from 'node:fs';
+import { CAREERS, FIELDS, CAREER_BY_ID } from '../public/shared/careers.mjs';
+import { SKILLS, STARTER_IDS, SKILL_IDS, SKILL_GROUPS } from '../public/shared/skills.mjs';
+import { LIMITS } from '../public/shared/config.mjs';
 import * as E from '../public/shared/engine.mjs';
 import { goodInput } from './helpers.mjs';
 
@@ -23,10 +25,22 @@ test('catalogue: every career is complete and consistent', () => {
     assert.ok(c.skills.every(s => SKILLS[s]), `${c.id} skills exist`);
     assert.equal(new Set(c.skills).size, c.skills.length);
     assert.ok(c.skills.filter(s => SKILLS[s].starter).length >= 2, `${c.id} has starter skills`);
-    assert.ok(c.subjects.every(s => SUBJECTS.includes(s)), `${c.id} subjects`);
+    assert.ok(c.subjects.length >= 1 && c.subjects.every(s => SUBJECTS.includes(s)), `${c.id} subjects`);
     assert.equal(c.tasks.length, 4);
-    assert.ok(c.summary && c.education && c.portfolio);
-    assert.ok(!/\d{3,}|\$|USD|salary/i.test(c.summary + c.education + c.tasks.join(' ')), `${c.id} has no invented numbers`);
+    assert.ok(c.summary && c.education && c.first, c.id);
+    assert.ok(FIELDS.some(f => f.id === c.field), `${c.id} field`);
+    assert.ok(existsSync(new URL(`../public/assets/img/3d/${c.img}.webp`, import.meta.url)), `${c.id} picture`);
+    assert.ok(!/\d{3,}|\$|USD|salary|per cent|percent/i.test(c.summary + c.education + c.tasks.join(' ') + c.first), `${c.id} has no invented numbers`);
+  }
+  assert.ok(CAREERS.length >= 100, 'about a hundred careers');
+  for (const f of FIELDS) {
+    assert.ok(CAREERS.filter(c => c.field === f.id).length >= 2, `${f.id} has careers`);
+    assert.ok(existsSync(new URL(`../public/assets/img/3d/${f.img}.webp`, import.meta.url)), `${f.id} picture`);
+  }
+  for (const id of SKILL_IDS) {
+    assert.equal(SKILLS[id].pts.length, 3, id);
+    assert.ok(SKILL_GROUPS.includes(SKILLS[id].group), id);
+    assert.ok(CAREERS.some(c => c.skills.includes(id)), `${id} is used`);
   }
 });
 
@@ -41,11 +55,13 @@ test('scoreAreas: all 4 -> 100, all 0 -> 0, one area only', () => {
 });
 
 test('rankCareers: interests drive the order, scores stay below 100, list is sorted', () => {
-  const profile = { grade: '11', subjects: [], skills: [] };
+  const profile = { mode: 'student', grade: '11', subjects: [], skills: [] };
   const tech = E.rankCareers(E.scoreAreas(QUESTIONS.map(q => (q.area === 'technical' || q.area === 'analytical' ? 4 : 0))), profile);
-  assert.ok(['software-engineer', 'data-scientist', 'cybersecurity-analyst', 'qa-engineer'].includes(tech[0].id), tech[0].id);
+  assert.ok(['it', 'data', 'engineering', 'science'].includes(CAREER_BY_ID[tech[0].id].field), tech[0].id);
   const art = E.rankCareers(E.scoreAreas(QUESTIONS.map(q => (q.area === 'creative' ? 4 : 0))), profile);
-  assert.ok(['graphic-designer', 'content-writer', 'ux-designer'].includes(art[0].id), art[0].id);
+  assert.ok(['design', 'arts', 'media'].includes(CAREER_BY_ID[art[0].id].field), art[0].id);
+  const care = E.rankCareers(E.scoreAreas(QUESTIONS.map(q => (q.area === 'social' ? 4 : 0))), profile);
+  assert.ok(['education', 'health', 'hospitality', 'transport', 'sports'].includes(CAREER_BY_ID[care[0].id].field), care[0].id);
   for (const list of [tech, art]) {
     assert.equal(list.length, CAREERS.length);
     assert.ok(list.every((r, i) => i === 0 || list[i - 1].match >= r.match));
@@ -56,6 +72,55 @@ test('rankCareers: interests drive the order, scores stay below 100, list is sor
   const base = E.rankCareers(areas, profile).find(r => r.id === 'data-analyst').match;
   const more = E.rankCareers(areas, { grade: '11', subjects: ['Mathematics', 'Informatics'], skills: ['excel', 'math', 'logic', 'detail', 'speak'] }).find(r => r.id === 'data-analyst').match;
   assert.ok(more > base);
+});
+
+test('the same answer everywhere is "flat" and no career is first just because it is listed first', () => {
+  const profile = { mode: 'student', grade: '11', subjects: [], skills: [] };
+  for (const v of [0, 2, 4]) {
+    const areas = E.scoreAreas(Array(30).fill(v));
+    assert.equal(E.isFlat(areas), true);
+    assert.equal(E.rulesResult({ answers: Array(30).fill(v), profile, note: '' }, 'off').flat, true);
+  }
+  assert.equal(E.isFlat(E.scoreAreas(QUESTIONS.map(q => (q.area === 'social' ? 4 : 1)))), false);
+  // with random answers, the first place is spread over many careers
+  let seed = 3; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const firsts = new Map();
+  for (let k = 0; k < 2000; k++) {
+    const lean = Array.from({ length: 6 }, () => rnd() * 4);
+    const answers = Array.from({ length: 30 }, (_, i) => Math.max(0, Math.min(4, Math.round(lean[i % 6] + (rnd() - 0.5) * 2))));
+    const id = E.pickTop(E.rankCareers(E.scoreAreas(answers), profile))[0].id;
+    firsts.set(id, (firsts.get(id) || 0) + 1);
+  }
+  assert.ok(firsts.size >= 60, `only ${firsts.size} different first places`);
+  assert.ok(Math.max(...firsts.values()) / 2000 < 0.1, 'no career is first in more than 10% of cases');
+});
+
+test('pickTop keeps at most two careers from one field', () => {
+  const profile = { mode: 'student', grade: '11', subjects: [], skills: [] };
+  const ranked = E.rankCareers(E.scoreAreas(QUESTIONS.map(q => (q.area === 'technical' ? 4 : 0))), profile);
+  const top = E.pickTop(ranked);
+  assert.equal(top.length, LIMITS.topN);
+  const per = {}; top.forEach(r => { per[r.field] = (per[r.field] || 0) + 1; });
+  assert.ok(Object.values(per).every(n => n <= LIMITS.perField), JSON.stringify(per));
+  assert.ok(top.every((r, i) => i === 0 || top[i - 1].match >= r.match));
+});
+
+test('professional path: validation, all skills count, and the goal moves careers in or out of the field', () => {
+  const pro = { mode: 'pro', field: 'it', exp: '3–5 years', edu: 'Bachelor’s degree', goal: 'stay', skills: ['sql', 'prog', 'git'] };
+  assert.equal(E.validateInput({ ...goodInput(), profile: pro }).ok, true);
+  for (const bad of [{ ...pro, field: 'space' }, { ...pro, exp: '50 years' }, { ...pro, edu: 'x' }, { ...pro, goal: 'win' }, { ...pro, skills: ['nope'] }, { ...pro, mode: 'boss' }])
+    assert.equal(E.validateInput({ ...goodInput(), profile: bad }).ok, false, JSON.stringify(bad));
+  const areas = E.scoreAreas(QUESTIONS.map(q => (q.area === 'analytical' || q.area === 'technical' ? 3 : 1)));
+  const stay = E.rankCareers(areas, pro);
+  const change = E.rankCareers(areas, { ...pro, goal: 'change' });
+  const m = (list, id) => list.find(r => r.id === id).match;
+  assert.ok(m(stay, 'software-engineer') > m(change, 'software-engineer'));
+  assert.ok(m(change, 'civil-engineer') > m(stay, 'civil-engineer'));
+  // a specialist skill counts for professionals
+  const withSql = m(E.rankCareers(areas, { ...pro, skills: ['sql'] }), 'data-analyst');
+  const without = m(E.rankCareers(areas, { ...pro, skills: [] }), 'data-analyst');
+  assert.ok(withSql > without);
+  assert.equal(E.modeOf({ grade: '11' }), 'student');            // results saved before version 2
 });
 
 test('skillGap: priorities and ownership', () => {
@@ -110,6 +175,8 @@ test('sanitizeAi: clamps shifts, drops unknown ids, filters skills, needs at lea
   };
   const out = E.sanitizeAi(raw, ranked, input);
   assert.ok(out && out.length === 5);
+  const per = {}; out.forEach(m => { const f = CAREER_BY_ID[m.id].field; per[f] = (per[f] || 0) + 1; });
+  assert.ok(Object.values(per).every(n => n <= LIMITS.perField));
   const first = out.find(m => m.id === ranked[0].id);
   assert.ok(first.match <= base(ranked[0].id) + 15 && first.match <= 99);
   assert.equal(first.summary, 'Good fit');
@@ -122,6 +189,9 @@ test('sanitizeAi: clamps shifts, drops unknown ids, filters skills, needs at lea
   assert.ok(out.every((m, i) => i === 0 || out[i - 1].match >= m.match));
   assert.equal(new Set(out.map(m => m.id)).size, out.length);
   assert.equal(E.sanitizeAi({ matches: [raw.matches[0]] }, ranked, input), null);
+  // careers that were not offered to the AI are dropped
+  const late = ranked.slice(LIMITS.aiCandidates).map(r => ({ id: r.id, match: 50, summary: 'x', build: [] }));
+  assert.equal(E.sanitizeAi({ matches: late }, ranked, input), null);
   assert.equal(E.sanitizeAi(null, ranked, input), null);
   assert.equal(E.sanitizeAi({ matches: 'x' }, ranked, input), null);
 });
@@ -138,6 +208,16 @@ test('rulesResult and aiResult make results the browser accepts', () => {
   assert.ok(!E.looksLikeResult(null));
   const device = E.rulesResult(input, 'unreachable', 'device');
   assert.equal(device.where, 'device');
+});
+
+test('aiPayload: only the best candidates, never a name', () => {
+  const input = E.validateInput({ ...goodInput(), name: 'Aigerim' }).value;
+  const areas = E.scoreAreas(input.answers);
+  const p = E.aiPayload(input, areas, E.rankCareers(areas, input.profile));
+  assert.equal(p.careers.length, LIMITS.aiCandidates);
+  assert.ok(!JSON.stringify(p).includes('Aigerim'));
+  assert.equal(p.person.path, 'student');
+  assert.ok(E.looksLikeResult({ v: 1, areas, matches: [{ id: 'data-analyst', match: 50 }], profile: { grade: '11', subjects: [], skills: [] } }));
 });
 
 test('matchFacts uses only real data', () => {

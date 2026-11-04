@@ -7,7 +7,7 @@ export const fresh = () => ({
   v: 1,
   name: '',
   consent: { privacy: false, ai: true, save: true },
-  profile: { grade: '11', subjects: [], skills: [], note: '' },
+  profile: { mode: 'student', grade: '11', subjects: [], skills: [], note: '', field: 'it', exp: '1–3 years', edu: 'Bachelor’s degree', goal: 'any' },
   answers: Array(30).fill(null),
   q: 0,
   result: null,          // the last result (with .answers added)

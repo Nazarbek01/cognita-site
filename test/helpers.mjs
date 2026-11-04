@@ -26,7 +26,7 @@ export function fakeAiAnswer(payload, { shift = 3, tweak } = {}) {
     id: c.id,
     match: c.baseline_match + (i === 0 ? shift : 0),
     summary: `You have strong scores that fit ${c.name}.`,
-    build: c.core_skills.map(s => s.id).filter(id => !payload.student.skills_already_have.includes(id)).slice(0, 2),
+    build: c.core_skills.map(s => s.id).filter(id => !payload.person.skills_already_have.includes(id)).slice(0, 2),
   }));
   return tweak ? tweak({ matches }) : { matches };
 }

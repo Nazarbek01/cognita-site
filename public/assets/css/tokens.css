@@ -2,104 +2,114 @@
    1. PRIMITIVE  raw values, named by what they are. Only this file may contain hex colours.
    2. SEMANTIC   what a value is FOR. Components use these.
    3. COMPONENT  per-component choices built from semantic tokens.
-   Visual language comes from the team's presentation decks: blue-to-violet gradient, pale gradient pages,
-   white cards with a coloured top bar, tinted pills, Inter ExtraBold headings. */
+   Visual language (v2): milky cream pages, bright pink, blue and sky blue, taken from the Cognita logo
+   (violet -> blue -> cyan nodes). Headings in Unbounded, text in Inter, 3D pictures from Fluent Emoji. */
 
 @font-face{font-family:Inter;font-weight:400;font-style:normal;font-display:swap;src:url(../fonts/inter-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:Inter;font-weight:500;font-style:normal;font-display:swap;src:url(../fonts/inter-latin-500-normal.woff2) format("woff2")}
 @font-face{font-family:Inter;font-weight:600;font-style:normal;font-display:swap;src:url(../fonts/inter-latin-600-normal.woff2) format("woff2")}
 @font-face{font-family:Inter;font-weight:700;font-style:normal;font-display:swap;src:url(../fonts/inter-latin-700-normal.woff2) format("woff2")}
 @font-face{font-family:Inter;font-weight:800;font-style:normal;font-display:swap;src:url(../fonts/inter-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:Unbounded;font-weight:500;font-style:normal;font-display:swap;src:url(../fonts/unbounded-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:Unbounded;font-weight:700;font-style:normal;font-display:swap;src:url(../fonts/unbounded-latin-700-normal.woff2) format("woff2")}
 
 :root{
   color-scheme:light;
 
   /* ---------- 1. PRIMITIVE ---------- */
   --p-white:#FFFFFF;
-  --p-navy-900:#0F1B3D;
-  --p-ink-900:#0F172A;
-  --p-ink-800:#1E293B;
-  --p-slate-700:#334155;
-  --p-slate-600:#475569;
-  --p-slate-500:#64748B;
-  --p-slate-400:#94A3B8;
-  --p-slate-300:#CBD5E1;
-  --p-slate-200:#E2E8F0;
-  --p-slate-100:#F1F5F9;
-  --p-slate-50:#F8FAFC;
-  --p-page:#F8F8FF;
+  --p-milk-50:#FFFBF6;  --p-milk-100:#FFF4E9;  --p-milk-200:#FBE9DA;  --p-milk-300:#F1DCCB;
+  --p-ink-900:#151A3D;  --p-ink-800:#232A55;  --p-ink-700:#3A4170;  --p-ink-500:#5F6590;  --p-ink-300:#A9ACC7;  --p-ink-100:#ECEBF4;
 
-  --p-blue-500:#2563FF;  --p-blue-400:#4F8DFF;  --p-blue-700:#1D4ED8;  --p-blue-900:#1E3A8A;
-  --p-blue-25:#F2F6FF; --p-indigo-500:#5B5BF5; --p-blue-100:#E5ECFF;  --p-blue-50:#E6F1FF;   --p-blue-300:#7FA6E6;  --p-blue-200:#DCE9FF;
-  --p-violet-500:#8B4DFF; --p-violet-600:#6D4DF0; --p-violet-700:#6D28D9; --p-violet-100:#EFE6FF; --p-violet-200:#EADFFF; --p-violet-300:#C4B5FD;
-  --p-pink-500:#FF4DA6;  --p-pink-700:#BE185D;  --p-pink-100:#FFE5F1;
-  --p-cyan-500:#00B8E6;  --p-cyan-700:#0E7490;  --p-cyan-100:#D9F6FF;
-  --p-orange-500:#FF9933; --p-orange-700:#C2600A; --p-orange-800:#9A4A00; --p-orange-100:#FFEAD3;
-  --p-green-600:#16A34A; --p-green-700:#15803D; --p-green-100:#DCF5E5; --p-green-300:#9AD8B3;
-  --p-lime-100:#F0FBD2;  --p-lime-300:#B7E04F;  --p-lime-900:#27410A;
-  --p-periwinkle-200:#CFE0FF; --p-periwinkle-100:#DCE5FF;
-
-  --p-page-blue:#E2F2FF; --p-page-periwinkle:#E6EEFF; --p-page-orchid:#F0E8FF; --p-page-blush:#FFE8F3; --p-page-violet:#EFE7FF; --p-page-rose:#FFEDEB; --p-page-pink:#FFE9F3; --p-page-sky:#DDF3FF; --p-page-indigo:#E6ECFF; --p-page-lilac:#F2E9FF; --p-page-sand:#FFEFD9; --p-page-mint:#DDF6FF;
+  --p-blue-800:#1D3BBF; --p-blue-600:#2F5BFF; --p-blue-400:#6E8DFF; --p-blue-100:#E2E9FF; --p-blue-50:#F1F4FF;
+  --p-sky-800:#075E82;  --p-sky-500:#18B4EE;  --p-sky-300:#86DBFB;  --p-sky-100:#DBF4FF;  --p-sky-50:#EFFAFF;
+  --p-pink-800:#B3185D; --p-pink-700:#D8247A; --p-pink-600:#E62E82; --p-pink-500:#FF4F9A; --p-pink-300:#FF9CC8; --p-pink-100:#FFE2EF; --p-pink-50:#FFF1F7;
+  --p-violet-800:#4A2FCB; --p-violet-600:#7352F7; --p-violet-500:#7B5CFF; --p-violet-100:#ECE6FF;
+  --p-peach-800:#A6440F; --p-peach-500:#FF8A4C; --p-peach-100:#FFE9DC;
+  --p-mint-800:#0B6F53;  --p-mint-500:#1FBF94;  --p-mint-100:#DAF5EC;
+  --p-sun-400:#FFC83D;   --p-sun-100:#FFF3D1;
 
   --p-font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --p-radius-xs:4px; --p-radius-sm:8px; --p-radius-md:12px; --p-radius-lg:14px; --p-radius-xl:18px; --p-radius-2xl:24px; --p-radius-3xl:34px; --p-radius-pill:999px;
-  --p-shadow-card:0 10px 30px rgba(15,23,42,.06),0 0 0 1px rgba(226,232,240,.9);
-  --p-shadow-row:0 8px 24px rgba(15,23,42,.05),0 0 0 1px rgba(226,232,240,.9);
-  --p-shadow-glow:0 18px 40px rgba(37,99,255,.25);
-  --p-shadow-pop:0 18px 50px rgba(15,23,42,.1),0 0 0 1px rgba(226,232,240,1);
-  --p-shadow-device:0 26px 60px rgba(6,12,45,.38);
+  --p-font-display:'Unbounded','Inter',system-ui,sans-serif;
+  --p-radius-sm:10px; --p-radius-md:14px; --p-radius-lg:18px; --p-radius-xl:24px; --p-radius-2xl:32px; --p-radius-pill:999px;
+  --p-shadow-soft:0 1px 2px rgba(21,26,61,.04),0 8px 24px rgba(47,91,255,.07);
+  --p-shadow-card:0 1px 2px rgba(21,26,61,.05),0 14px 34px rgba(47,91,255,.09);
+  --p-shadow-pop:0 20px 50px rgba(47,91,255,.16),0 6px 16px rgba(255,79,154,.10);
+  --p-shadow-pink:0 12px 28px rgba(255,79,154,.28);
+  --p-shadow-blue:0 12px 28px rgba(47,91,255,.30);
   --p-ease:cubic-bezier(.2,.7,.2,1);
 
   /* ---------- 2. SEMANTIC ---------- */
   --font:var(--p-font);
-  --color-text:var(--p-ink-900);
-  --color-text-soft:var(--p-slate-600);
-  --color-text-strong-soft:var(--p-slate-700);
-  --color-text-muted:var(--p-slate-500);
-  --color-border:var(--p-slate-200);
+  --font-display:var(--p-font-display);
+
+  --color-page:var(--p-milk-50);
+  --color-page-warm:var(--p-milk-100);
   --color-surface:var(--p-white);
-  --color-surface-sunken:var(--p-slate-50);
-  --color-surface-quiet:var(--p-slate-100);
-  --color-page:var(--p-page);
+  --color-surface-warm:var(--p-milk-100);
+  --color-surface-sunken:var(--p-milk-50);
+  --color-line:var(--p-milk-200);
+  --color-line-strong:var(--p-milk-300);
+  --color-text:var(--p-ink-900);
+  --color-text-soft:var(--p-ink-700);
+  --color-text-muted:var(--p-ink-500);
+  --color-text-faint:var(--p-ink-300);
   --color-on-brand:var(--p-white);
-  --color-on-brand-soft:var(--p-periwinkle-100);
-  --color-on-brand-label:var(--p-periwinkle-200);
+  --color-dark:var(--p-ink-900);
+  --color-dark-soft:var(--p-ink-800);
 
-  --color-primary:var(--p-blue-500);       --color-primary-deep:var(--p-blue-700);   --color-primary-tint:var(--p-blue-100);
-  --color-accent:var(--p-violet-500);      --color-accent-deep:var(--p-violet-700);  --color-accent-tint:var(--p-violet-100);
-  --color-highlight:var(--p-pink-500);     --color-highlight-deep:var(--p-pink-700); --color-highlight-tint:var(--p-pink-100);
-  --color-info:var(--p-cyan-500);          --color-info-deep:var(--p-cyan-700);      --color-info-tint:var(--p-cyan-100);
-  --color-warn:var(--p-orange-500);        --color-warn-deep:var(--p-orange-800);    --color-warn-tint:var(--p-orange-100);
-  --color-success:var(--p-green-600);      --color-success-deep:var(--p-green-700);  --color-success-tint:var(--p-green-100);
-  --color-nav:var(--p-ink-900);            --color-nav-hover:var(--p-ink-800);       --color-nav-text:var(--p-slate-300);
+  --color-primary:var(--p-blue-600);    --color-primary-deep:var(--p-blue-800);   --color-primary-tint:var(--p-blue-100);  --color-primary-faint:var(--p-blue-50);
+  --color-pink:var(--p-pink-500);       --color-pink-deep:var(--p-pink-800);      --color-pink-tint:var(--p-pink-100);     --color-pink-faint:var(--p-pink-50);
+  --color-sky:var(--p-sky-500);         --color-sky-deep:var(--p-sky-800);        --color-sky-tint:var(--p-sky-100);       --color-sky-faint:var(--p-sky-50);
+  --color-violet:var(--p-violet-500);   --color-violet-deep:var(--p-violet-800);  --color-violet-tint:var(--p-violet-100);
+  --color-success:var(--p-mint-500);    --color-success-deep:var(--p-mint-800);   --color-success-tint:var(--p-mint-100);
+  --color-warn:var(--p-peach-500);      --color-warn-deep:var(--p-peach-800);     --color-warn-tint:var(--p-peach-100);
+  --color-danger:var(--p-pink-600);     --color-danger-deep:var(--p-pink-800);
+  --color-star:var(--p-sun-400);        --color-star-tint:var(--p-sun-100);
 
-  --gradient-brand:linear-gradient(135deg,var(--p-navy-900) 0%,var(--p-blue-500) 55%,var(--p-violet-500) 100%);
-  --gradient-action:linear-gradient(135deg,var(--p-blue-500),var(--p-violet-500));
-  --gradient-route:linear-gradient(135deg,var(--p-blue-700),var(--p-blue-500) 60%,var(--p-indigo-500));
-  --gradient-logo:linear-gradient(135deg,var(--p-blue-400),var(--p-blue-500) 60%,var(--p-violet-600));
-  --gradient-soft:linear-gradient(135deg,var(--p-blue-200),var(--p-violet-200));
-  --gradient-warn-bar:linear-gradient(90deg,var(--p-orange-500),var(--p-pink-500));
+  /* the six interest areas */
+  --area-analytical:var(--p-blue-600);
+  --area-technical:var(--p-sky-500);
+  --area-organising:var(--p-mint-500);
+  --area-creative:var(--p-violet-500);
+  --area-enterprising:var(--p-peach-500);
+  --area-social:var(--p-pink-500);
 
-  --page-a:var(--p-page-blue); --page-b:var(--p-page-violet); --page-c:var(--p-page-rose);
+  /* field hues: a strong colour, a deep text colour and a light tint for each */
+  --hue-blue:var(--p-blue-600);    --hue-blue-deep:var(--p-blue-800);    --hue-blue-tint:var(--p-blue-100);
+  --hue-sky:var(--p-sky-500);      --hue-sky-deep:var(--p-sky-800);      --hue-sky-tint:var(--p-sky-100);
+  --hue-pink:var(--p-pink-500);    --hue-pink-deep:var(--p-pink-800);    --hue-pink-tint:var(--p-pink-100);
+  --hue-violet:var(--p-violet-500);--hue-violet-deep:var(--p-violet-800);--hue-violet-tint:var(--p-violet-100);
+  --hue-peach:var(--p-peach-500);  --hue-peach-deep:var(--p-peach-800);  --hue-peach-tint:var(--p-peach-100);
+  --hue-mint:var(--p-mint-500);    --hue-mint-deep:var(--p-mint-800);    --hue-mint-tint:var(--p-mint-100);
+
+  --gradient-brand:linear-gradient(115deg,var(--p-pink-500) 0%,var(--p-violet-500) 40%,var(--p-blue-600) 70%,var(--p-sky-500) 100%);
+  --gradient-action:linear-gradient(110deg,var(--p-blue-600) 0%,var(--p-violet-600) 100%);
+  --gradient-pink:linear-gradient(110deg,var(--p-pink-700) 0%,var(--p-violet-600) 100%);
+  --gradient-sky:linear-gradient(135deg,var(--p-sky-100) 0%,var(--p-blue-100) 100%);
+  --gradient-blush:linear-gradient(135deg,var(--p-pink-100) 0%,var(--p-milk-100) 100%);
+  --gradient-dream:linear-gradient(135deg,var(--p-pink-50) 0%,var(--p-milk-50) 45%,var(--p-sky-50) 100%);
+  --glow-pink:radial-gradient(closest-side,var(--p-pink-300),transparent);
+  --glow-sky:radial-gradient(closest-side,var(--p-sky-300),transparent);
+  --glow-blue:radial-gradient(closest-side,var(--p-blue-400),transparent);
+
+  --veil-1:rgba(255,255,255,.16);
+  --veil-2:rgba(255,255,255,.24);
+  --veil-3:rgba(255,255,255,.38);
+  --veil-4:rgba(255,255,255,.72);
+  --veil-glass:rgba(255,255,255,.66);
 
   --focus-ring:3px solid var(--color-primary);
+  --shadow-soft:var(--p-shadow-soft);
   --shadow-card:var(--p-shadow-card);
-  --shadow-row:var(--p-shadow-row);
-  --shadow-glow:var(--p-shadow-glow);
-  --shadow-action:0 8px 20px rgba(37,99,255,.28);
-  --veil-1:rgba(255,255,255,.14);
-  --veil-2:rgba(255,255,255,.18);
-  --veil-3:rgba(255,255,255,.3);
-  --veil-4:rgba(255,255,255,.65);
+  --shadow-pop:var(--p-shadow-pop);
+  --shadow-pink:var(--p-shadow-pink);
+  --shadow-blue:var(--p-shadow-blue);
 
   /* ---------- 3. COMPONENT ---------- */
-  --button-radius:var(--p-radius-lg);
-  --button-pad:13px 22px;
-  --card-radius:var(--p-radius-2xl);
-  --card-pad:28px 26px 24px;
-  --card-bar:5px;
+  --button-radius:var(--p-radius-pill);
+  --card-radius:var(--p-radius-xl);
   --chip-radius:var(--p-radius-pill);
-  --input-radius:var(--p-radius-lg);
-  --input-border:var(--color-border);
-  --content-max:1160px;
+  --input-radius:var(--p-radius-md);
+  --content-max:1200px;
 }

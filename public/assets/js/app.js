@@ -448,11 +448,32 @@ function onField(e) {
 document.addEventListener('input', onField);
 document.addEventListener('change', onField);
 
-document.addEventListener('submit', e => {
+document.addEventListener('submit', async e => {
   if (e.target.dataset && e.target.dataset.form === 'code') {
     e.preventDefault();
     const v = e.target.querySelector('input').value;
     submitCode(v);
+    return;
+  }
+  if (e.target.dataset && e.target.dataset.form === 'project-feedback') {
+    e.preventDefault();
+    const form = e.target;
+    const button = form.querySelector('button[type="submit"]');
+    const rating = Number(new FormData(form).get('rating'));
+    const comment = String(new FormData(form).get('comment') || '').trim().slice(0, LIMITS.commentMax);
+    if (!(rating >= 1 && rating <= 5)) { toast('Choose a rating first.'); return; }
+    button.disabled = true;
+    button.textContent = 'Sending…';
+    try {
+      await api.sendFeedback({ code: 'DEVICE', rating, comment });
+      form.reset();
+      toast('Thank you! Your feedback was sent.');
+    } catch (err) {
+      toast(err.status === 503 ? 'Feedback storage is not connected yet. Please try again later.' : (err.status === 0 ? 'Could not send feedback. Check your connection.' : err.message));
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Send feedback';
+    }
   }
 });
 

@@ -33,7 +33,7 @@ const EXIT = '<button class="link" data-act="exit">Save &amp; exit</button>';
 
 function nav(S, extra) {
   const done = !!(S && S.result);
-  const links = `<button class="nlink hide-sm" data-go="/careers">Careers</button><button class="nlink hide-sm" data-scroll="how">How it works</button><button class="nlink hide-md" data-scroll="ai">AI &amp; privacy</button><button class="nlink hide-md" data-go="/open">Open my result</button>`;
+  const links = `<button class="nlink hide-sm" data-go="/careers">Careers</button><button class="nlink hide-sm" data-scroll="how">How it works</button><button class="nlink hide-md" data-scroll="plans">Plans</button><button class="nlink hide-md" data-scroll="feedback">Feedback</button><button class="nlink hide-md" data-scroll="ai">AI &amp; privacy</button><button class="nlink hide-md" data-go="/open">Open my result</button>`;
   const cta = `<button class="btn go sm" data-go="${done ? '/dashboard' : '/start'}">${done ? 'My dashboard' : 'Start the test'}</button>`;
   return `<header class="topnav">${brand()}<nav class="nlinks" aria-label="Site">${extra === undefined ? links + cta : extra}</nav></header>`;
 }
@@ -159,6 +159,20 @@ export function home(S) {
    ${faq('Why are there no salaries?', 'We show a number only when we have its source and the date it was checked. Market analytics with sources is planned. Until then we show no numbers.')}
    ${faq('I already work. Can I use Cognita?', 'Yes. Choose “I’m a professional”. You tell us your field, experience, education and goal, and your skills count more in the match.')}
    ${faq('Why do I see careers from different fields?', `Your top five include at most ${LIMITS.perField} careers from one field, so you see real options instead of five versions of the same job.`)}</div></section>
+
+ <section class="sect" id="plans"><span class="kicker">Plans</span><h2>Start free. Keep growing.</h2><p class="sub">Try the core career journey for free, then choose a plan for deeper guidance and continued progress.</p>
+  <div class="plans">
+   <article class="plan"><span class="chip dev">Free</span><h3>Explore</h3><p class="price">₸0 <small>forever</small></p><p class="plan-desc">A clear first step toward a career that fits.</p><ul><li>Career assessment and top matches</li><li>AI explanations for career matches</li><li>Skill-gap overview</li><li>One personal roadmap</li></ul><button class="btn ghost" data-go="/start">Start for free</button></article>
+   <article class="plan featured"><span class="chip ai">Most popular</span><h3>Cognita Plus</h3><p class="price">₸2,990 <small>/ month · proposed</small></p><p class="plan-desc">More support to turn your roadmap into steady progress.</p><ul><li>Everything in Explore</li><li>Save and revisit multiple career paths</li><li>Expanded AI explanations and guidance</li><li>Progress history and roadmap updates</li><li>Quests and learning recommendations</li></ul><button class="btn go" type="button" disabled aria-describedby="plans-note">Coming soon</button></article>
+   <article class="plan"><span class="chip dev">For focused learners</span><h3>Cognita Pro</h3><p class="price">₸6,990 <small>/ month · proposed</small></p><p class="plan-desc">A deeper toolkit for people actively changing or building a career.</p><ul><li>Everything in Plus</li><li>Compare several career paths</li><li>Detailed skill-gap priorities</li><li>Multiple roadmaps and goal tracking</li><li>Early access to market insights</li></ul><button class="btn ghost" type="button" disabled aria-describedby="plans-note">Coming soon</button></article>
+  </div><p class="plan-note" id="plans-note">Prices are examples for the project presentation. Paid plans and payment processing are not active yet; no payment will be taken.</p></section>
+
+ <section class="sect" id="feedback"><span class="kicker">Your feedback</span><h2>Help us improve Cognita</h2><p class="sub">Tell us what you think about the project. Please do not include personal or sensitive information.</p>
+  <form class="card feedback-form" data-form="project-feedback">
+   <fieldset><legend>How useful does Cognita seem to you?</legend><div class="rating-options">${[1,2,3,4,5].map(n => `<label><input type="radio" name="rating" value="${n}" required><span>${n}<small>${n === 1 ? 'Not useful' : n === 5 ? 'Very useful' : ''}</small></span></label>`).join('')}</div></fieldset>
+   <label class="feedback-label" for="project-feedback-comment">What should we improve?</label><textarea id="project-feedback-comment" name="comment" maxlength="500" rows="4" placeholder="Your feedback (optional)"></textarea>
+   <div class="row"><button class="btn go" type="submit">Send feedback</button><span class="muted small">Your feedback helps us improve the project.</span></div>
+  </form></section>
 
  <section class="final"><div>${pic('rocket', 96)}<h2>Your future shouldn’t be a guess.</h2><p>Five minutes, thirty statements, five careers with reasons.</p><button class="btn white lg" data-go="${cta[1]}">${cta[0]} ${ARROW}</button></div></section>
  ${footer()}</main></div>`;

@@ -1,6 +1,8 @@
 // Everything the visitor does is kept in this browser (localStorage), so a refresh never loses progress.
 // All reads and writes are wrapped: storage can be blocked (private mode) and the site must still work.
 
+import { freshQuests } from '../../shared/quests.mjs';
+
 const KEY = 'cognita.v1';
 
 export const fresh = () => ({
@@ -16,6 +18,7 @@ export const fresh = () => ({
   focus: null,           // career id used for roadmap, dashboard
   roadmap: {},           // { careerId: { done: ['sql'] } }
   feedback: {},          // { 'CODE:careerId': 5 }
+  quests: freshQuests(), // daily quests, XP, streak and badges (this browser only)
 });
 
 export function load() {
@@ -25,7 +28,7 @@ export function load() {
     const s = JSON.parse(raw);
     if (!s || s.v !== 1) return fresh();
     const f = fresh();
-    return { ...f, ...s, consent: { ...f.consent, ...s.consent }, profile: { ...f.profile, ...s.profile } };
+    return { ...f, ...s, consent: { ...f.consent, ...s.consent }, profile: { ...f.profile, ...s.profile }, quests: { ...f.quests, ...(s.quests || {}) } };
   } catch { return fresh(); }
 }
 

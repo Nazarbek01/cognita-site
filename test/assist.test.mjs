@@ -112,3 +112,21 @@ test('assist: the mentor keeps line breaks for short lists', async () => {
   const { body } = await run({ kind: 'chat', message: 'How do I start?', history: [] }, f);
   assert.equal(body.data.answer, 'Start here:\n- Learn the basics\n- Build a small project');
 });
+
+test('assist: market explanation never shows numbers, quests come in three types', async () => {
+  const f = makeFetch({ assist: (task) => task === 'market_explainer'
+    ? { explanation: 'This is the sector average. Engineers here earn 900 000 tenge. Pay depends on your city.', tips: ['Check 5 job adverts.', 'Learn SQL to grow.'] }
+    : { quests: [{ type: 'learn', title: 'Read about JOIN at https://x.com', minutes: 400 }, { type: 'learn', title: 'dup', minutes: 5 }, { type: 'practice', title: 'Write 3 queries', minutes: 20 }] } });
+  const m = await run({ kind: 'market', career: 'petroleum-engineer', person }, f);
+  assert.equal(m.status, 200);
+  assert.ok(!/\d/.test(m.body.data.explanation + m.body.data.tips.join(' ')));
+  assert.equal(m.body.data.explanation, 'This is the sector average. Pay depends on your city.');
+  const sent = f.log.openai[0].body.messages[1].content;
+  assert.ok(!/\d{3}/.test(JSON.parse(sent).sector_position));
+  const q = await run({ kind: 'quests', career: 'software-engineer', step: 'sql', person }, f);
+  assert.equal(q.status, 200);
+  assert.deepEqual(q.body.data.quests.map(x => x.type), ['learn', 'practice']);
+  assert.ok(!q.body.data.quests[0].title.includes('https'));
+  assert.equal(q.body.data.quests[0].minutes, 60);
+  assert.equal((await run({ kind: 'quests', career: 'software-engineer', step: 'cook' })).status, 400);
+});

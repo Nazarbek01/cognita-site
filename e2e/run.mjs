@@ -177,8 +177,9 @@ async function main() {
     await page.click('text=View career details');
     await page.waitForURL(/#\/career\//);
     await look(page, 'career');
-    check(`[${vp}] no salary numbers anywhere on career page`, !/\$|USD\s*\d|\d+\s*(KZT|₸)/.test(await page.locator('main').innerText()));
-    check(`[${vp}] market data marked as coming soon`, await page.locator('.chip.soon', { hasText: 'Coming soon' }).isVisible());
+    const mk = page.locator('.card.mkt');
+    check(`[${vp}] career page shows the sector market card with a source`, await mk.isVisible() && /Not the exact pay of this job/.test(await mk.innerText()) && /stat\.gov\.kz|Bureau of National Statistics/i.test(await mk.innerText()));
+    check(`[${vp}] worldwide market marked as coming soon`, await mk.locator('.chip.soon', { hasText: 'Worldwide' }).isVisible());
     await page.click('text=Build my roadmap');
     await page.waitForURL(/#\/roadmap\//);
     await look(page, 'roadmap');

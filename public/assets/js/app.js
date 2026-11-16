@@ -9,6 +9,7 @@ import { CAREER_BY_ID, FIELD_BY_ID } from '../../shared/careers.mjs';
 import { rulesResult, validateInput, looksLikeResult, scoreAreas, isFlat, modeOf } from '../../shared/engine.mjs';
 import { LIMITS, MODES } from '../../shared/config.mjs';
 import { STARTER_IDS } from '../../shared/skills.mjs';
+import { ensureToday, toggleQuest, questEvent, useAiQuests, dayKey } from '../../shared/quests.mjs';
 
 let S = store.load();
 const app = document.getElementById('app');
@@ -47,8 +48,9 @@ const T = {
   iv: {},              // careerId -> { questions }
   ans: {},             // 'careerId:i' -> { text, fb }
   draft: {},           // 'careerId:i' -> answer being typed
+  market: {},          // careerId -> AI explanation of the official numbers
 };
-const AI_SCREENS = new Set(['career', 'roadmap', 'ai', 'mentor', 'compare', 'interview']);
+const AI_SCREENS = new Set(['career', 'roadmap', 'ai', 'mentor', 'compare', 'interview', 'market', 'quests', 'dashboard']);
 
 /* ---------- small helpers ---------- */
 
@@ -99,7 +101,7 @@ function titleFor(name, arg) {
     home: 'Cognita: AI career navigation', start: 'Get started', type: 'Your path', profile: 'Your profile', careers: 'Explore careers',
     test: 'Assessment', analysis: 'Analysing your answers', delay: 'The AI is taking longer than usual', results: 'Your career matches',
     dashboard: 'Dashboard', roadmap: 'My roadmap', open: 'Open a saved result', privacy: 'Privacy Notice', career: 'Career details', why: 'Why it fits',
-    ai: 'AI tools', mentor: 'AI career mentor', compare: 'Compare careers', interview: 'Interview practice',
+    ai: 'AI tools', mentor: 'AI career mentor', compare: 'Compare careers', interview: 'Interview practice', market: 'Market analytics', quests: 'Quests and rewards',
   }[name] || 'Page not found';
   const c = arg && CAREER_BY_ID[arg];
   const label = (name === 'career' || name === 'why' || name === 'roadmap' || name === 'interview') && c ? `${t}: ${c.name}` : t;
@@ -125,6 +127,8 @@ function view(name, arg, q) {
     case 'mentor': return V.mentor(S, T);
     case 'compare': return V.compare(S, T);
     case 'interview': return V.interview(S, T, arg || V.focusId(S));
+    case 'market': return V.market(S, T, q.get('c'));
+    case 'quests': return V.quests(S, T);
     case 'open': return V.open(S, openMsg, openBusy);
     case 'privacy': return V.privacy();
     default: return null;
@@ -166,13 +170,14 @@ function render(fresh = true) {
   if (name === 'roadmap' && arg) S.focus = arg;
   if (name === 'career' && arg && S.result) S.focus = arg;
 
+  if (name === 'dashboard' || name === 'quests') syncQuests();
   let html = name === 'career' && !arg ? null : view(name, arg, q);
   let screen = name;
   if (html == null) { html = V.notFound(); screen = 'notfound'; }
 
   const y = fresh ? 0 : window.scrollY;
   document.body.dataset.screen = screen;
-  document.body.classList.toggle('hastab', ['dashboard', 'career', 'roadmap', 'ai', 'mentor', 'compare', 'interview'].includes(screen));
+  document.body.classList.toggle('hastab', ['dashboard', 'career', 'roadmap', 'ai', 'mentor', 'compare', 'interview', 'market', 'quests'].includes(screen));
   document.title = titleFor(screen === 'notfound' ? 'x' : name, arg);
   app.innerHTML = html;
   window.scrollTo(0, y);
@@ -297,6 +302,23 @@ async function submitCode(text) {
   }
 }
 
+/* ---------- quests & rewards ---------- */
+
+/** Make sure today's quests exist (a new day gives new quests from the current roadmap step). */
+function syncQuests() {
+  const id = V.focusId(S);
+  const step = V.roadmapSteps(S, id).find(s => s.state === 'now');
+  if (step) { ensureToday(S.quests, CAREER_BY_ID[id].name, step, dayKey()); persist(); }
+}
+
+/** Something worth a reward happened: give the badge and finish the matching quest. */
+function reward(event) {
+  syncQuests();
+  const won = questEvent(S.quests, event, dayKey());
+  persist();
+  if (won.length) toast('Badge earned: ' + won.map(b => b.name).join(', ') + ' 🎉');
+}
+
 /* ---------- AI tools ---------- */
 
 /** What the AI tools may know about the person: path, ticked skills and (after the test) interest scores. */
@@ -336,7 +358,7 @@ async function sendChat(text) {
   T.chat.push({ role: 'user', text: msg });
   T.chatDraft = '';
   const ok = await runAssist('chat', { kind: 'chat', message: msg, history, career: S.result ? V.focusId(S) : '', person: personCtx() },
-    d => T.chat.push({ role: 'assistant', text: d.answer, careers: d.careers }));
+    d => { T.chat.push({ role: 'assistant', text: d.answer, careers: d.careers }); reward('mentor'); });
   if (!ok) { if (T.chat.length && T.chat[T.chat.length - 1].role === 'user') T.chat.pop(); T.chatDraft = msg; rerender(); }
   const box = document.getElementById('chatbox');
   if (box) box.scrollTop = box.scrollHeight;
@@ -355,16 +377,35 @@ const ACTIONS = {
   learnAi(el) {
     const id = V.focusId(S), step = el.dataset.id;
     const key = id + ':' + step;
-    runAssist('learn:' + key, { kind: 'learn', career: id, step, person: personCtx() }, d => { T.learn[key] = d; });
+    runAssist('learn:' + key, { kind: 'learn', career: id, step, person: personCtx() }, d => { T.learn[key] = d; reward('plan'); });
   },
   cmpSwap() { [T.cmp.a, T.cmp.b] = [T.cmp.b, T.cmp.a]; refresh(); },
   cmpRun() {
     const { a, b } = T.cmp;
     if (a === b) { toast('Choose two different careers.'); return; }
     const key = a + '|' + b;
-    runAssist('cmp:' + key, { kind: 'compare', a, b, person: personCtx() }, d => { T.compare[key] = d; });
+    runAssist('cmp:' + key, { kind: 'compare', a, b, person: personCtx() }, d => { T.compare[key] = d; reward('compare'); });
   },
   chatAsk(el) { sendChat(el.dataset.q); },
+  marketAi(el) {
+    const id = el.dataset.id;
+    runAssist('mkt:' + id, { kind: 'market', career: id, person: personCtx() }, d => { T.market[id] = d; });
+  },
+  quest(el) {
+    syncQuests();
+    const id = el.dataset.id;
+    const won = toggleQuest(S.quests, id, dayKey());
+    persist();
+    refresh(`[data-act=quest][data-id="${id}"]`);
+    const x = S.quests.list.find(item => item.id === id);
+    toast(won.length ? 'Badge earned: ' + won.map(b => b.name).join(', ') + ' 🎉' : x && x.done ? `Quest done: +${x.xp} XP` : 'Quest unticked.');
+  },
+  questsAi() {
+    const id = V.focusId(S);
+    const step = V.roadmapSteps(S, id).find(s => s.state === 'now');
+    if (!step) return;
+    runAssist('quests:' + id, { kind: 'quests', career: id, step: step.id, person: personCtx() }, d => { syncQuests(); useAiQuests(S.quests, d.quests, dayKey()); persist(); });
+  },
   chatClear() { T.chat = []; T.chatDraft = ''; delete T.err.chat; refresh('#f-chat'); },
   ivGen(el) {
     const id = el.dataset.id;
@@ -451,6 +492,7 @@ const ACTIONS = {
     sel = null;
     refresh();
     toast(i === -1 ? 'Step marked as done.' : 'Step marked as not done.');
+    if (i === -1) reward('step');
   },
   async fb(el) {
     const id = el.dataset.id, v = Number(el.dataset.v);
@@ -536,6 +578,7 @@ function onField(e) {
     refresh('#' + t.id);
     return;
   }
+  else if (t.dataset.f === 'mkCareer') { if (e.type === 'change' && CAREER_BY_ID[t.value]) go('/market?c=' + t.value); return; }
   else if (t.dataset.f === 'ivCareer') { if (e.type === 'change' && CAREER_BY_ID[t.value]) go('/interview/' + t.value); return; }
   else if (t.dataset.f === 'search') {
     ex.q = t.value.slice(0, 60);
@@ -569,7 +612,7 @@ document.addEventListener('submit', async e => {
     if (text.length < 3) { toast('Write your answer first.'); return; }
     const k = id + ':' + i;
     T.draft[k] = text;
-    runAssist('ans:' + k, { kind: 'answer', career: id, question: q.q, answer: text }, d => { T.ans[k] = { text, fb: d }; });
+    runAssist('ans:' + k, { kind: 'answer', career: id, question: q.q, answer: text }, d => { T.ans[k] = { text, fb: d }; reward('interview'); });
     return;
   }
   if (e.target.dataset && e.target.dataset.form === 'code') {

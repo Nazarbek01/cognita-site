@@ -48,6 +48,10 @@ export function fakeAssist(task, p) {
         resource_types: ['Free online course', 'Practice exercises'], search: [`${p.roadmap_step.name} for beginners`, `${p.roadmap_step.name} exercises`], practice: '[demo] Build one small thing with it.', check: '[demo] You can explain it to a friend.' };
     case 'interview_questions':
       return { questions: [1, 2, 3, 4, 5].map(i => ({ q: `[demo] Question ${i} about ${p.career.name}?`, why: '[demo] To see how you think.', tip: '[demo] Give one real example.' })) };
+    case 'market_explainer':
+      return { explanation: `[demo] This is the average for the whole sector ${p.sector}, not the pay of ${p.career.name}. Pay depends on city, company and experience.`, tips: ['[demo] Look at job adverts in your city.', '[demo] Talk to people who do this job.'] };
+    case 'daily_quests':
+      return { quests: [{ type: 'learn', title: `[demo] Read a short intro to ${p.roadmap_step.name}`, minutes: 15 }, { type: 'practice', title: '[demo] Do one small exercise', minutes: 20 }, { type: 'reflect', title: '[demo] Write two sentences about it', minutes: 5 }] };
     case 'interview_feedback':
       return { score: 3, good: '[demo] You answered the question.', improve: '[demo] Add one concrete example.', example: '[demo] In [your project], I ...' };
     default:

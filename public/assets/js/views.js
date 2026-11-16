@@ -7,6 +7,8 @@ import { CAREERS, CAREER_BY_ID, FIELDS, FIELD_BY_ID, careersIn } from '../../sha
 import { SKILLS, SKILL_GROUPS, STARTER_IDS, SKILL_IDS } from '../../shared/skills.mjs';
 import { scoreAreas, skillGap, topAreasFor, matchFacts, rulesSummary, strongestAreas, isFlat, modeOf } from '../../shared/engine.mjs';
 import { SITE } from './site.config.js';
+import { KZ_SECTORS, KZ_NATIONAL, KZ_SOURCE, KZ_MEDIAN_SOURCE, marketFor, tenge } from '../../shared/market.mjs';
+import { BADGES, dayKey, levelOf, currentStreak } from '../../shared/quests.mjs';
 import { ic, CK, LOCK, ARROW } from './icons.js';
 
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -73,10 +75,10 @@ function shell(S, active, inner) {
     ['/career/' + f, 'Career details', 'career', 'card'],
     ['/roadmap/' + f, 'My roadmap', 'roadmap', 'route'],
     ['/ai', 'AI tools', 'ai', 'spark'],
+    ['/market', 'Market analytics', 'market', 'chart'],
+    ['/quests', 'Quests &amp; rewards', 'quests', 'flame'],
   ];
   const side = items.map(([to, n, id, icon]) => `<button data-go="${to}" ${id === active ? 'aria-current="page"' : ''} ${id === 'results' && !S.result ? 'disabled' : ''}>${ic(icon, 20)}<span>${n}</span></button>`).join('')
-    + `<button disabled>${ic('chart', 20)}<span>Market analytics</span><em>Soon</em></button>`
-    + `<button disabled>${ic('flame', 20)}<span>Quests &amp; rewards</span><em>Soon</em></button>`
     + `<button data-go="/privacy" ${active === 'privacy' ? 'aria-current="page"' : ''}>${ic('lock', 20)}<span>Privacy</span></button>`;
   const who = S.name ? esc(S.name) : (S.result ? pathLabel(S.result.profile) : 'Guest');
   const initials = esc((S.name || who).trim().slice(0, 2).toUpperCase());
@@ -144,7 +146,7 @@ export function home(S) {
   <ol class="hsteps">${how(1, 'memo', 'Answer 30 statements', 'About your interests, plus your studies or work and the skills you have.')}${how(2, 'crystal-ball', 'Get your matches', `Your answers are compared with ${N_CAREERS} career profiles. The AI explains each match.`)}${how(3, 'bullseye', 'See why it fits', 'Every match shows the scores, skills and answers behind it.')}${how(4, 'puzzle-piece', 'Find your skill gap', 'See which skills you have and which ones to build next.')}${how(5, 'world-map', 'Follow your roadmap', 'One step for each missing skill, then a real project. Mark steps as done.')}</ol></section>
 
  <section class="sect" id="features"><span class="kicker">Features</span><h2>What you can use today</h2><p class="sub">Live means you can use it now. Coming soon means it is planned and clearly marked.</p>
-  <div class="feats">${feature('memo', 'AI Career Assessment', 'live', 'Top five careers with a match percentage and a reason for each.')}${feature('puzzle-piece', 'Skill-Gap Analysis', 'live', 'The skills you have and the ones you still need, in priority order. An AI coach explains why each one matters.')}${feature('world-map', 'Personal Roadmap', 'live', 'A step-by-step route to the career you choose, with progress you can mark and an AI learning plan for each step.')}${feature('speech-balloon', 'AI Career Mentor', 'live', 'Ask questions about careers and studies and get simple answers with careers to explore.')}${feature('balance-scale', 'Career Comparison', 'live', 'Two careers side by side: daily work, skills, education, and which one fits you better.')}${feature('speaking-head', 'Interview Practice', 'live', 'Practice questions for a career, a score for your answer and tips to improve it.')}${feature('chart-increasing', 'Market Analytics', 'soon', 'Salaries and demand in Kazakhstan. Every number will show its source and date.')}${feature('trophy', 'Quests &amp; Rewards', 'soon', 'Daily tasks linked to your roadmap, with streaks and badges.')}${feature('bar-chart', 'Weakness Analytics', 'soon', 'Practice quizzes that find the topics you need to work on.')}</div></section>
+  <div class="feats">${feature('memo', 'AI Career Assessment', 'live', 'Top five careers with a match percentage and a reason for each.')}${feature('puzzle-piece', 'Skill-Gap Analysis', 'live', 'The skills you have and the ones you still need, in priority order. An AI coach explains why each one matters.')}${feature('world-map', 'Personal Roadmap', 'live', 'A step-by-step route to the career you choose, with progress you can mark and an AI learning plan for each step.')}${feature('speech-balloon', 'AI Career Mentor', 'live', 'Ask questions about careers and studies and get simple answers with careers to explore.')}${feature('balance-scale', 'Career Comparison', 'live', 'Two careers side by side: daily work, skills, education, and which one fits you better.')}${feature('speaking-head', 'Interview Practice', 'live', 'Practice questions for a career, a score for your answer and tips to improve it.')}${feature('chart-increasing', 'Market Analytics', 'live', 'Official average wages by sector in Kazakhstan, with source and date. Worldwide data is coming soon.')}${feature('trophy', 'Quests &amp; Rewards', 'live', 'Three small quests a day from your roadmap, with XP, levels, streaks and badges.')}${feature('bar-chart', 'Weakness Analytics', 'soon', 'Practice quizzes that find the topics you need to work on.')}</div></section>
 
  <section class="sect" id="ai"><span class="kicker">AI &amp; privacy</span><h2>Helpful, limited and under your control</h2>
   <div class="g3">
@@ -157,7 +159,7 @@ export function home(S) {
    ${faq('Is Cognita a psychological test?', 'No. The 30 statements were written by the Cognita team. Cognita is a guidance tool that helps you explore careers. It is not a validated psychological test and not professional career counselling.')}
    ${faq('Do I need an account?', 'No. There is no account, password or email. Your progress stays in your browser. If you want, you can save your result under a private code and open it on another device.')}
    ${faq('Where do the careers come from?', `The Cognita team wrote ${N_CAREERS} career profiles in ${N_FIELDS} fields. How much each interest area matters for a career is our estimate, based on the Holland (RIASEC) interest types that are often used in career guidance. It is not official data.`)}
-   ${faq('Why are there no salaries?', 'We show a number only when we have its source and the date it was checked. Market analytics with sources is planned. Until then we show no numbers.')}
+   ${faq('Where do the salary numbers come from?', 'From the official statistics of Kazakhstan: average monthly wages by sector, with the source and the period next to every number. Official statistics do not give the pay of each job, so a career shows the average of its sector. The AI never writes salary numbers.')}
    ${faq('I already work. Can I use Cognita?', 'Yes. Choose “I’m a professional”. You tell us your field, experience, education and goal, and your skills count more in the match.')}
    ${faq('Why do I see careers from different fields?', `Your top five include at most ${LIMITS.perField} careers from one field, so you see real options instead of five versions of the same job.`)}</div></section>
 
@@ -431,6 +433,7 @@ export function dashboard(S) {
    <div class="prg"><i style="width:${pct}%"></i></div>
    <div class="tiles">${steps.map(s => `<button class="stp ${s.state}" data-go="/roadmap/${id}?s=${s.id}"><span>${esc(s.title)}</span><small>${stateLabel(s)}</small></button>`).join('')}</div>
    <div class="row"><button class="btn white" data-go="/roadmap/${id}">Open roadmap ${ARROW}</button></div></div>
+  ${dashQuests(S)}
   <div class="dgrid">
    <div class="card"><h3>Recommended careers</h3>${top3.map(m => { const cc = CAREER_BY_ID[m.id]; return `<button class="cmr" style="${hueVars(cc.field)}" data-go="/why/${m.id}">${pic(cc.img, 36)}<span class="a"><b>${esc(cc.name)}</b><span class="b"><i style="width:${m.match}%"></i></span></span><em>${m.match}%</em></button>`; }).join('')}<button class="link" data-go="/results">All matches</button></div>
    <div class="card"><h3>Skills to build next</h3>${gap.length ? gap.map((g, i) => `<div class="gap1"><i>${i + 1}</i>${esc(g.name)}</div>`).join('') : '<p class="muted">You have every core skill for this career.</p>'}<div class="under"><button class="link" data-go="/career/${id}">See the skill gap</button></div></div>
@@ -454,7 +457,7 @@ export function career(S, id, T) {
    <div class="row"><button class="btn go" data-act="roadmapFor" data-id="${id}">Build my roadmap ${ARROW}</button>${m ? `<button class="btn ghost" data-go="/why/${id}">Why it fits</button>` : ''}<button class="btn ghost" data-go="/interview/${id}">${ic('spark', 16)} Practise an interview</button><button class="btn ghost" data-go="/compare?a=${id}">${ic('spark', 16)} Compare</button></div></div></section>
   <div class="dgrid two-one">
    <div class="card"><h3>What the work looks like</h3><ul class="tl">${c.tasks.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>
-   <div class="card soft"><h3>Market data · Kazakhstan</h3><span class="chip soon">Coming soon</span><p class="muted">Salaries, demand and requirements will appear here. We will show a number only when we have its source and the date it was checked.</p></div></div>
+   ${marketCard(c)}</div>
   <div class="card mt"><h3>Skill gap: you vs this career</h3><p class="muted">${S.result ? 'Green skills you already have. Orange skills are your next stops.' : 'Take the assessment to see which of these you already have.'}</p>
    <div class="skl">${have.map(s => `<span class="have">${esc(SKILLS[s].name)}</span>`).join('')}${need.map(s => `<span class="need">${esc(SKILLS[s].name)}</span>`).join('')}</div>
    ${S.result ? `<div class="gaplist">${gapRows(id, owned) || '<p class="muted">You already have every core skill listed. Nice.</p>'}</div>` : ''}</div>
@@ -498,6 +501,89 @@ export function roadmap(S, id, sel, T) {
    ${canMark ? `<button class="btn ${cur.state === 'done' ? 'ghost' : 'go'}" data-act="mark" data-id="${cur.id}">${cur.state === 'done' ? 'Undo: mark as not done' : 'Mark as done ✓'}</button>` : ''}</div>
    <div class="card soft"><h3>What is inside</h3><ul class="tl">${cur.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div></div>
   ${cur.goal ? '' : learnPlan(S, T, id, cur)}`);
+}
+
+/* ---------- market analytics ---------- */
+
+const pctWord = v => (v > 0 ? `${v}% above` : v < 0 ? `${-v}% below` : 'equal to');
+const srcLine = (src, extra = '') => `<p class="muted small">Source: <a href="${src.url}" target="_blank" rel="noopener noreferrer">${esc(src.publisher)}</a>, ${esc(src.period)}${extra}</p>`;
+
+/** The market card on a career page. */
+function marketCard(c) {
+  const m = marketFor(c);
+  return `<div class="card mkt"><div class="chips mb"><span class="chip ok">Kazakhstan</span><span class="chip soon">Worldwide · soon</span></div>
+   <h3>Market · ${esc(m.sector.name)}</h3><div class="mkbig">${tenge(m.sector.wage)}<small>/ month</small></div>
+   <p class="muted">Average wage in the sector of this career, ${pctWord(m.vsAverage)} the national average (${tenge(KZ_NATIONAL.average)}). Sector ${m.rank} of ${m.of}. Not the exact pay of this job.</p>
+   ${srcLine(KZ_SOURCE)}<button class="btn sm ghost" data-go="/market?c=${c.id}">${ic('chart', 16)} Open market analytics</button></div>`;
+}
+
+export function market(S, T, cid) {
+  const c = CAREER_BY_ID[cid] || CAREER_BY_ID[focusId(S)];
+  const m = marketFor(c);
+  const max = KZ_SECTORS[0].wage;
+  const mine = {};
+  if (S.result) for (const x of S.result.matches) (mine[marketFor(CAREER_BY_ID[x.id]).sector.id] ||= []).push(CAREER_BY_ID[x.id].name);
+  const bars = KZ_SECTORS.map(s => {
+    const on = s.id === m.sector.id;
+    const tag = mine[s.id] ? `<em>${mine[s.id].map(esc).join(', ')}</em>` : '';
+    return `<li class="${on ? 'on' : ''}"><span class="sn">${esc(s.name)}${tag}</span><span class="sb"><i style="width:${(s.wage / max * 100).toFixed(1)}%"></i></span><b>${tenge(s.wage)}</b></li>`;
+  }).join('');
+  const avgPos = (KZ_NATIONAL.average / max * 100).toFixed(1);
+  const key = 'mkt:' + c.id;
+  const d = T.market[c.id];
+  const ai = d ? `<div class="aisum"><span class="chip ai">${ic('spark', 14)} AI explanation</span><p>${esc(d.explanation)}</p>${d.tips.length ? `<ul class="tl">${d.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}</div><p class="muted small">The AI only explains the official numbers. It is not allowed to write any numbers itself.</p>`
+    : `${aiGate(S)}<div class="row">${aiBtn(S, T, key, 'marketAi', 'What does this mean for me?', `data-id="${c.id}"`)}</div>${errLine(T, key)}`;
+  return shell(S, 'market', `<section class="chead slim">${pic('chart-increasing', 88, 'cpic')}<div><span class="kicker">Market analytics</span><h1 class="greet">Wages by sector</h1>
+   <p class="sub">Official average monthly wages in Kazakhstan, ${esc(KZ_SOURCE.period)}. Choose a career to see its sector.</p></div></section>
+   <div class="mtabs" role="tablist" aria-label="Region"><button role="tab" aria-selected="true" class="on">Kazakhstan</button><button role="tab" aria-selected="false" disabled>Worldwide <em>Soon</em></button></div>
+   <div class="kpis"><div class="card"><small>National average</small><b>${tenge(KZ_NATIONAL.average)}</b><span class="muted small">per month, ${esc(KZ_SOURCE.period)}</span></div>
+    <div class="card"><small>National median</small><b>${tenge(KZ_NATIONAL.median)}</b><span class="muted small">half of workers earn less than this</span></div>
+    <div class="card hl" style="${hueVars(c.field)}"><small>${esc(c.name)} · sector</small><b>${tenge(m.sector.wage)}</b><span class="small">${pctWord(m.vsAverage)} the national average</span></div></div>
+   <div class="card mt"><div class="field"><label for="f-mkc">Career</label><select id="f-mkc" data-f="mkCareer">${careerOptions(c.id)}</select></div>
+    <p class="muted small">${esc(c.name)} belongs to <b>${esc(m.sector.name)}</b> (sector ${m.rank} of ${m.of}). The link between a career and a sector is our team's estimate. The statistics do not show the pay of each job.</p>
+    ${ai}</div>
+   <div class="card mt"><h3>All ${KZ_SECTORS.length} sectors</h3><p class="muted small">Average monthly wage, tenge. ${S.result ? 'Sectors of your top matches are named in pink.' : ''} The line shows the national average.</p>
+    <ol class="sbars" style="--avg:${avgPos}%">${bars}</ol>
+    ${srcLine(KZ_SOURCE, `, released ${fmtDate(KZ_SOURCE.released)}. ${esc(KZ_SOURCE.note)}`)}
+    ${srcLine(KZ_MEDIAN_SOURCE, ` (median), released ${fmtDate(KZ_MEDIAN_SOURCE.released)}.`)}</div>
+   <div class="card mt soft"><h3>${pic('globe-with-meridians', 32)} Worldwide · coming soon</h3><p class="muted">We will add other countries only with official sources and dates for every number, like for Kazakhstan.</p></div>`);
+}
+
+/* ---------- quests & rewards ---------- */
+
+export function questCard(S, compact) {
+  const q = S.quests, today = dayKey();
+  const lv = levelOf(q.xp), streak = currentStreak(q, today);
+  const f = focusId(S);
+  const rows = q.day === today ? q.list.map(x => `<li class="qrow ${x.done ? 'done' : ''}"><button class="qck" role="checkbox" aria-checked="${x.done}" data-act="quest" data-id="${x.id}" aria-label="${esc(x.title)}">${x.done ? CK : ''}</button>
+     <div><b>${esc(x.title)}</b><small>${x.minutes} min · +${x.xp} XP${x.type === 'tool' && !x.done ? ' · done automatically when you use the tool' : ''}</small></div>
+     ${x.go && !x.done ? `<button class="btn sm ghost" data-go="${x.go === '/interview' || x.go === '/roadmap' ? x.go + '/' + f : x.go}">Go</button>` : ''}</li>`).join('') : '';
+  const stats = `<div class="qstats"><span>${pic('rocket', 28)}<b>Level ${lv.level}</b><small>${lv.into}/${lv.need} XP</small></span><span>${pic('sports-medal', 28)}<b>${streak} day${streak === 1 ? '' : 's'}</b><small>streak</small></span><span>${pic('glowing-star', 28)}<b>${Object.keys(q.badges).length}/${BADGES.length}</b><small>badges</small></span></div>`;
+  return { rows, stats, lv, streak };
+}
+
+function dashQuests(S) {
+  const { rows, stats } = questCard(S);
+  return `<div class="card mt"><div class="hrow"><h3>${pic('trophy', 32)} Today's quests</h3><button class="link" data-go="/quests">All quests and badges</button></div>${stats}${rows ? `<ul class="qlist">${rows}</ul>` : ''}</div>`;
+}
+
+export function quests(S, T) {
+  const q = S.quests, today = dayKey();
+  const { rows, stats, lv } = questCard(S);
+  const c = CAREER_BY_ID[focusId(S)];
+  const step = roadmapSteps(S, c.id).find(s => s.state === 'now');
+  const badges = BADGES.map(b => { const got = q.badges[b.id]; return `<div class="badge ${got ? 'got' : ''}">${pic(b.img, 48)}<b>${esc(b.name)}</b><small>${got ? 'Earned ' + fmtDate(got) : esc(b.how)}</small></div>`; }).join('');
+  const aiKey = 'quests:' + c.id;
+  const canAi = step && !q.ai && q.list.some(x => !x.done);
+  return shell(S, 'quests', `<section class="chead slim">${pic('trophy', 88, 'cpic')}<div><span class="kicker">Quests &amp; rewards</span><h1 class="greet">Today's quests</h1>
+   <p class="sub">Three small quests a day from your roadmap to <b>${esc(c.name)}</b>${step ? `, current step: <b>${esc(step.title)}</b>` : ''}. Keep your streak by finishing at least one quest every day.</p></div></section>
+   ${stats}<div class="lvbar" aria-hidden="true"><i style="width:${lv.into}%"></i></div>
+   <div class="card mt">${step ? `<ul class="qlist">${rows}</ul>
+    <div class="row">${canAi ? aiBtn(S, T, aiKey, 'questsAi', 'Make today\'s quests with AI', '', 'ghost') : q.ai ? '<span class="chip ai">' + ic('spark', 14) + ' Today\'s quests were made by AI</span>' : ''}<button class="btn sm ghost" data-go="/roadmap/${c.id}">Open my roadmap</button></div>${errLine(T, aiKey)}`
+    : `<p>You have finished every step of this roadmap. Choose another career on the roadmap page to get new quests.</p><div class="row"><button class="btn go" data-go="/roadmap/${c.id}">Open my roadmap</button></div>`}
+    ${S.result ? '' : '<p class="muted small">Take the assessment so your quests follow the career that fits you best.</p>'}</div>
+   <h2 class="h2">Badges</h2><div class="badges">${badges}</div>
+   <p class="muted small">Progress is kept in this browser only (there are no accounts). Clearing the site data resets it. Rewards are for motivation and have no money value.</p>`);
 }
 
 /* ---------- AI tools ---------- */

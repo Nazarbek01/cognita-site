@@ -10,6 +10,7 @@ import { SITE } from './site.config.js';
 import { KZ_SECTORS, KZ_NATIONAL, KZ_SOURCE, KZ_MEDIAN_SOURCE, marketFor, tenge } from '../../shared/market.mjs';
 import { BADGES, dayKey, levelOf, currentStreak } from '../../shared/quests.mjs';
 import { ic, CK, LOCK, ARROW } from './icons.js';
+import * as cloud from './cloud.js';
 
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const AREA = Object.fromEntries(AREAS.map(a => [a.id, a]));
@@ -35,7 +36,7 @@ const EXIT = '<button class="link" data-act="exit">Save &amp; exit</button>';
 
 function nav(S, extra) {
   const done = !!(S && S.result);
-  const links = `<button class="nlink hide-sm" data-go="/careers">Careers</button><button class="nlink hide-sm" data-go="/ai">AI tools</button><button class="nlink hide-md" data-scroll="how">How it works</button><button class="nlink hide-md" data-scroll="plans">Plans</button><button class="nlink hide-md" data-scroll="feedback">Feedback</button><button class="nlink hide-md" data-scroll="ai">AI &amp; privacy</button><button class="nlink hide-md" data-go="/open">Open my result</button>`;
+  const links = `<button class="nlink hide-sm" data-go="/careers">Careers</button><button class="nlink hide-sm" data-go="/ai">AI tools</button><button class="nlink hide-sm" data-go="/account">${cloud.user() ? 'Account' : 'Sign in'}</button><button class="nlink hide-md" data-scroll="how">How it works</button><button class="nlink hide-md" data-scroll="plans">Plans</button><button class="nlink hide-md" data-scroll="feedback">Feedback</button><button class="nlink hide-md" data-scroll="ai">AI &amp; privacy</button><button class="nlink hide-md" data-go="/open">Open my result</button>`;
   const cta = `<button class="btn go sm" data-go="${done ? '/dashboard' : '/start'}">${done ? 'My dashboard' : 'Start the test'}</button>`;
   return `<header class="topnav">${brand()}<nav class="nlinks" aria-label="Site">${extra === undefined ? links + cta : extra}</nav></header>`;
 }
@@ -77,6 +78,7 @@ function shell(S, active, inner) {
     ['/ai', 'AI tools', 'ai', 'spark'],
     ['/market', 'Market analytics', 'market', 'chart'],
     ['/quests', 'Quests &amp; rewards', 'quests', 'flame'],
+    ['/account', cloud.user() ? 'Account' : 'Sign in', 'account', 'user'],
   ];
   const side = items.map(([to, n, id, icon]) => `<button data-go="${to}" ${id === active ? 'aria-current="page"' : ''} ${id === 'results' && !S.result ? 'disabled' : ''}>${ic(icon, 20)}<span>${n}</span></button>`).join('')
     + `<button data-go="/privacy" ${active === 'privacy' ? 'aria-current="page"' : ''}>${ic('lock', 20)}<span>Privacy</span></button>`;
@@ -583,7 +585,7 @@ export function quests(S, T) {
     : `<p>You have finished every step of this roadmap. Choose another career on the roadmap page to get new quests.</p><div class="row"><button class="btn go" data-go="/roadmap/${c.id}">Open my roadmap</button></div>`}
     ${S.result ? '' : '<p class="muted small">Take the assessment so your quests follow the career that fits you best.</p>'}</div>
    <h2 class="h2">Badges</h2><div class="badges">${badges}</div>
-   <p class="muted small">Progress is kept in this browser only (there are no accounts). Clearing the site data resets it. Rewards are for motivation and have no money value.</p>`);
+   <p class="muted small">Progress is kept in this browser. If you sign in with Google it is also saved to your account. Clearing the site data resets the browser copy. Rewards are for motivation and have no money value.</p>`);
 }
 
 /* ---------- AI tools ---------- */
@@ -746,7 +748,7 @@ export function privacy() {
   return `<div class="wrap">${topbar('<button class="btn ghost sm" data-act="back">' + ic('back', 16) + ' Back</button>')}<main id="main"><div class="prose">
   ${pic('locked', 80)}<h1 class="title">Privacy Notice</h1><p class="sub">Short and plain. It describes what this website really does.</p>
   <h2>What Cognita is</h2><p>Cognita is a career guidance website made by students of Astana IT University. It gives suggestions based on your answers. It is not a psychological test and not professional career counselling.</p>
-  <h2>What we do not ask for</h2><p>We do not ask for your name, email, phone number, birth date or a password. There are no accounts.</p>
+  <h2>What we do not ask for</h2><p>We do not ask for your name, phone number, birth date or a password. Accounts are optional: you can sign in with Google to keep your progress on other devices. Without signing in, nothing about you is stored on our side.</p>
   <h2>What happens to your data</h2>
   <div class="tablewrap"><table><thead><tr><th>Data</th><th>Where it goes</th><th>When</th></tr></thead><tbody>
    <tr><td>Your first name (optional)</td><td>Only your own browser</td><td>Always. Never sent.</td></tr>
@@ -755,14 +757,37 @@ export function privacy() {
    <tr><td>Six interest scores, profile, skills and the optional note</td><td>OpenAI, to write the explanations</td><td>Only if “Use AI” is on. The note has emails and phone numbers removed first.</td></tr>
    <tr><td>AI tools: your question or interview answer, your path, ticked skills and interest scores</td><td>OpenAI, to write the answer. Cognita does not save it.</td><td>Only when “Use AI” is on and you press an AI button. Emails and phone numbers are removed first.</td></tr>
    <tr><td>Your 30 answers, scores, profile, skills and matches (never the note or your name)</td><td>A private Notion database kept by the Cognita team, under a random result code</td><td>Only if “Save my result” is on</td></tr>
+   <tr><td>If you sign in with Google: your e-mail address, your latest result and answers, and your quest progress (XP, streak, badges)</td><td>Supabase (a database service). Each person can read only their own rows. Google handles the password; Cognita never sees it.</td><td>Only after you press “Sign in with Google”. You can delete it any time on the Account page.</td></tr>
    <tr><td>Feedback rating and comment</td><td>The same Notion workspace</td><td>Only when you press a feedback button. Do not write personal data in comments.</td></tr></tbody></table></div>
   <h2>OpenAI</h2><p>When the AI is on, OpenAI processes the data listed above under <a href="https://openai.com/policies/privacy-policy/" target="_blank" rel="noopener noreferrer">its own privacy policy</a>. If you switch the AI off, nothing is sent to OpenAI and matches are calculated by simple rules on our server (or on your device if the server cannot be reached).</p>
   <h2>Your result code</h2><p>The code is the only key to a saved result. Anyone who has it can open that result, so share it only with people you trust.</p>
-  <h2>Cookies</h2><p>We set no cookies. The site uses your browser’s local storage to remember your progress.</p>
+  <h2>Cookies</h2><p>We set no cookies. The site uses your browser’s local storage to remember your progress and, if you sign in, your sign-in token.</p>
   <h2>How long we keep it</h2><p>Saved results are kept until the team deletes them. To ask for a saved result or a comment to be deleted, contact ${contact} and include your result code.</p>
   <h2>Pictures</h2><p>The 3D pictures are Microsoft Fluent Emoji, used under the MIT licence. The Cognita logo belongs to the Cognita team.</p>
   <h2>Delete the data on this device</h2><p><button class="btn sm ghost" data-act="wipe">Clear everything stored in this browser</button></p>
   </div>${footer()}</main></div>`;
+}
+
+export function account(S, CL) {
+  const u = cloud.user();
+  const g = `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h6a5.2 5.2 0 0 1-2.2 3.4v2.8h3.6c2.1-1.9 3.2-4.8 3.2-8z"/><path fill="#34A853" d="M12 23c3 0 5.500-1 7.400-2.700l-3.600-2.800c-1 .7-2.300 1.100-3.800 1.100-2.900 0-5.400-2-6.300-4.600H2v2.900A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.700 14c-.2-.7-.4-1.400-.4-2s.1-1.400.4-2V7.100H2a11 11 0 0 0 0 9.900z"/><path fill="#EA4335" d="M12 5.400c1.600 0 3.100.6 4.200 1.600l3.200-3.200A11 11 0 0 0 2 7.100L5.700 10c.9-2.600 3.400-4.600 6.300-4.600z"/></svg>`;
+  const head = `<section class="chead slim">${pic('locked', 88, 'cpic')}<div><span class="kicker">Account</span><h1 class="greet">${u ? 'You are signed in' : 'Keep your progress safe'}</h1>`;
+  let body;
+  if (!cloud.enabled()) {
+    body = `<p class="sub">Accounts are switched off in this demo copy. Everything still works and stays in your browser.</p></div></section>`;
+  } else if (!u) {
+    body = `<p class="sub">Sign in with Google to keep your latest result and your quest progress on every device. It is optional: Cognita works the same without it.</p></div></section>
+    <div class="card"><h3>What is saved</h3><ul class="tl"><li>Your e-mail address (from Google), so we know the account is yours.</li><li>Your latest result, answers, and your quest progress (XP, streak, badges).</li><li>Nothing from the AI tools, and never your Google password.</li></ul>
+    <p class="muted small">You can delete everything from this page at any time. Details are in the <button class="link" data-go="/privacy">Privacy Notice</button>.</p>
+    <div class="row"><button class="btn go" data-act="signIn">${g} Sign in with Google</button></div></div>`;
+  } else {
+    body = `<p class="sub">${esc(u.email || 'Google account')}</p></div></section>
+    <div class="card"><h3>Cloud copy</h3><p class="muted">${CL.busy ? 'Saving…' : CL.msg ? esc(CL.msg) : 'Your latest result and quest progress are saved to your account.'}</p>
+    <div class="row"><button class="btn ghost" data-act="syncNow" ${CL.busy ? 'disabled' : ''}>Sync now</button><button class="btn ghost" data-act="signOut">Sign out</button></div></div>
+    <div class="card"><h3>Delete my cloud data</h3><p class="muted">This removes your result, answers and quest progress from our database. The copy in this browser stays. You can sign in again later.</p>
+    <div class="row"><button class="btn sm ghost" data-act="cloudWipe" ${CL.busy ? 'disabled' : ''}>Delete cloud data</button></div></div>`;
+  }
+  return shell(S, 'account', head + body);
 }
 
 export function notFound() {

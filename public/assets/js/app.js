@@ -4,6 +4,7 @@
 
 import * as store from './store.js';
 import * as api from './api.js';
+import * as cloud from './cloud.js';
 import * as V from './views.js';
 import { CAREER_BY_ID, FIELD_BY_ID } from '../../shared/careers.mjs';
 import { rulesResult, validateInput, looksLikeResult, scoreAreas, isFlat, modeOf } from '../../shared/engine.mjs';
@@ -14,7 +15,23 @@ import { ensureToday, toggleQuest, questEvent, useAiQuests, dayKey } from '../..
 let S = store.load();
 const app = document.getElementById('app');
 const toastEl = document.getElementById('toast');
-const persist = () => store.save(S);
+const persist = () => { store.save(S); if (cloud.user()) scheduleSync(); };
+const CL = { busy: false, msg: '' };   // state of the account page
+let syncTimer = 0;
+const scheduleSync = () => { clearTimeout(syncTimer); syncTimer = setTimeout(() => cloudSync(true), 4000); };
+/** Sync with the cloud. quiet=true is the background save: it never shows a message on success. */
+async function cloudSync(quiet) {
+  if (!cloud.user() || CL.busy) return;
+  CL.busy = true; if (!quiet) { CL.msg = ''; refresh(); }
+  try {
+    const out = await cloud.sync(S);
+    if (out.quests) S.quests = { ...S.quests, ...out.quests };
+    if (out.result) { S.result = out.result; S.code = out.code; S.saveStatus = out.code ? 'saved' : 'off'; S.focus = out.result.matches[0].id; if (out.answers && out.answers.length === 30) S.answers = out.answers; }
+    store.save(S);
+    CL.msg = quiet ? CL.msg : 'Saved to your account.';
+  } catch (e) { CL.msg = e.status === 401 ? 'Please sign in again.' : e.message; if (e.status === 401) refresh(); }
+  CL.busy = false; refresh();
+}
 const CODE_RE = /^COG-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 
 // The current screen lives in the address (#/results). The one-file demo build sets
@@ -101,7 +118,7 @@ function titleFor(name, arg) {
     home: 'Cognita: AI career navigation', start: 'Get started', type: 'Your path', profile: 'Your profile', careers: 'Explore careers',
     test: 'Assessment', analysis: 'Analysing your answers', delay: 'The AI is taking longer than usual', results: 'Your career matches',
     dashboard: 'Dashboard', roadmap: 'My roadmap', open: 'Open a saved result', privacy: 'Privacy Notice', career: 'Career details', why: 'Why it fits',
-    ai: 'AI tools', mentor: 'AI career mentor', compare: 'Compare careers', interview: 'Interview practice', market: 'Market analytics', quests: 'Quests and rewards',
+    account: 'Account', ai: 'AI tools', mentor: 'AI career mentor', compare: 'Compare careers', interview: 'Interview practice', market: 'Market analytics', quests: 'Quests and rewards',
   }[name] || 'Page not found';
   const c = arg && CAREER_BY_ID[arg];
   const label = (name === 'career' || name === 'why' || name === 'roadmap' || name === 'interview') && c ? `${t}: ${c.name}` : t;
@@ -129,6 +146,7 @@ function view(name, arg, q) {
     case 'interview': return V.interview(S, T, arg || V.focusId(S));
     case 'market': return V.market(S, T, q.get('c'));
     case 'quests': return V.quests(S, T);
+    case 'account': return V.account(S, CL);
     case 'open': return V.open(S, openMsg, openBusy);
     case 'privacy': return V.privacy();
     default: return null;
@@ -177,7 +195,7 @@ function render(fresh = true) {
 
   const y = fresh ? 0 : window.scrollY;
   document.body.dataset.screen = screen;
-  document.body.classList.toggle('hastab', ['dashboard', 'career', 'roadmap', 'ai', 'mentor', 'compare', 'interview', 'market', 'quests'].includes(screen));
+  document.body.classList.toggle('hastab', ['dashboard', 'career', 'roadmap', 'ai', 'mentor', 'compare', 'interview', 'market', 'quests', 'account'].includes(screen));
   document.title = titleFor(screen === 'notfound' ? 'x' : name, arg);
   app.innerHTML = html;
   window.scrollTo(0, y);
@@ -511,11 +529,20 @@ const ACTIONS = {
       toast('Press Ctrl+C (or Cmd+C) to copy the code.');
     }
   },
+  signIn() { cloud.signIn(); },
+  signOut() { cloud.signOut(); CL.msg = ''; toast('Signed out. Your progress stays in this browser.'); refresh(); },
+  syncNow() { cloudSync(false); },
+  async cloudWipe() {
+    if (CL.busy) return;
+    CL.busy = true; refresh();
+    try { await cloud.wipeCloud(); CL.msg = 'Your cloud data was deleted.'; } catch (e) { CL.msg = e.message; }
+    CL.busy = false; refresh();
+  },
   exit() { persist(); toast('Progress saved on this device.'); go('/'); },
   back() { if (history.length > 1) history.back(); else go('/'); },
   wipe(el) {
     if (!el.dataset.armed) { el.dataset.armed = '1'; el.textContent = 'Click again to confirm'; return; }
-    store.wipe(); S = store.fresh(); startErr = false; toast('Everything stored in this browser was cleared.'); go('/');
+    cloud.signOut(); store.wipe(); S = store.fresh(); startErr = false; toast('Everything stored in this browser was cleared.'); go('/');
   },
 };
 
@@ -666,5 +693,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-window.addEventListener('hashchange', () => render(true));
+window.addEventListener('hashchange', () => { if (cloud.takeRedirect()) cloudSync(false); render(true); });
+const cameBack = cloud.takeRedirect();
 render(true);
+if (cameBack) cloudSync(false);

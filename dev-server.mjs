@@ -10,7 +10,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { handleMatch, handleResult, handleFeedback, handleHealth } from './netlify/lib/handlers.mjs';
+import { handleMatch, handleResult, handleFeedback, handleHealth, handleAssist } from './netlify/lib/handlers.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, 'public');
@@ -58,7 +58,7 @@ const TYPES = {
   '.woff2': 'font/woff2', '.png': 'image/png', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8',
 };
 
-const API = { '/api/match': handleMatch, '/api/result': handleResult, '/api/feedback': handleFeedback, '/api/health': handleHealth };
+const API = { '/api/match': handleMatch, '/api/result': handleResult, '/api/feedback': handleFeedback, '/api/health': handleHealth, '/api/assist': handleAssist };
 
 async function readBody(req) {
   const chunks = [];

@@ -31,6 +31,30 @@ export function fakeAiAnswer(payload, { shift = 3, tweak } = {}) {
   return tweak ? tweak({ matches }) : { matches };
 }
 
+/** Canned answers for the AI tools (mock mode and tests). Never judge the real AI by these. */
+export function fakeAssist(task, p) {
+  switch (task) {
+    case 'skill_gap_coach':
+      return { summary: `[demo] You are missing ${p.missing_skills.length} core skills. That is a normal place to start.`,
+        steps: p.missing_skills.map(s => ({ id: s.id, why: `[demo] ${p.career.name} work uses ${s.name} every week.`, first_step: `[demo] Spend 30 minutes on one beginner exercise about ${s.name}.` })) };
+    case 'career_comparison':
+      return { summary: `[demo] ${p.career_a.name} and ${p.career_b.name} need different daily work.`,
+        rows: ['Daily work', 'Key skills', 'Education path', 'Interests it needs', 'Good first step'].map(aspect => ({ aspect, a: `[demo] ${aspect} in ${p.career_a.name}.`, b: `[demo] ${aspect} in ${p.career_b.name}.` })),
+        fit: '[demo] Compare your interest scores with what each career needs most.' };
+    case 'career_mentor':
+      return { answer: `[demo] Good question. Start with the basics:\n- Read what the work looks like\n- Try one small project`, on_topic: true, careers: p.catalogue.slice(0, 2).map(c => c[0]) };
+    case 'learning_plan':
+      return { plan: [{ title: '[demo] Learn the basics', todo: `Read about ${p.roadmap_step.name} and take notes.`, time: '1 week' }, { title: '[demo] Practise', todo: 'Do short exercises every day.', time: '2 weeks' }, { title: '[demo] Use it', todo: 'Use it in a small project.', time: '1 week' }],
+        resource_types: ['Free online course', 'Practice exercises'], search: [`${p.roadmap_step.name} for beginners`, `${p.roadmap_step.name} exercises`], practice: '[demo] Build one small thing with it.', check: '[demo] You can explain it to a friend.' };
+    case 'interview_questions':
+      return { questions: [1, 2, 3, 4, 5].map(i => ({ q: `[demo] Question ${i} about ${p.career.name}?`, why: '[demo] To see how you think.', tip: '[demo] Give one real example.' })) };
+    case 'interview_feedback':
+      return { score: 3, good: '[demo] You answered the question.', improve: '[demo] Add one concrete example.', example: '[demo] In [your project], I ...' };
+    default:
+      return {};
+  }
+}
+
 /**
  * Fake fetch that behaves like OpenAI + Notion.
  * opts.ai: 'ok' | 'garbage' | 'http500' | 'timeout' | 'refusal' | 'xss' | function(payload)->object
@@ -51,6 +75,11 @@ export function makeFetch(opts = {}) {
       if (mode === 'refusal') return reply(200, { choices: [{ message: { refusal: 'no', content: null } }] });
       if (mode === 'garbage') return reply(200, { choices: [{ message: { content: 'not json at all' } }] });
       const payload = JSON.parse(body.messages[1].content);
+      const task = body.response_format.json_schema.name;
+      if (task !== 'career_matches') {
+        const a = typeof opts.assist === 'function' ? opts.assist(task, payload) : fakeAssist(task, payload);
+        return reply(200, { choices: [{ message: { content: JSON.stringify(a) } }] });
+      }
       const answer = typeof mode === 'function' ? mode(payload)
         : mode === 'xss' ? fakeAiAnswer(payload, { tweak: a => ({ matches: a.matches.map(m => ({ ...m, summary: '<img src=x onerror="window.__xss=1">Fits you <b>well</b>' })) }) })
         : fakeAiAnswer(payload);

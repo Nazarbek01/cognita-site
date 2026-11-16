@@ -33,7 +33,7 @@ const EXIT = '<button class="link" data-act="exit">Save &amp; exit</button>';
 
 function nav(S, extra) {
   const done = !!(S && S.result);
-  const links = `<button class="nlink hide-sm" data-go="/careers">Careers</button><button class="nlink hide-sm" data-scroll="how">How it works</button><button class="nlink hide-md" data-scroll="plans">Plans</button><button class="nlink hide-md" data-scroll="feedback">Feedback</button><button class="nlink hide-md" data-scroll="ai">AI &amp; privacy</button><button class="nlink hide-md" data-go="/open">Open my result</button>`;
+  const links = `<button class="nlink hide-sm" data-go="/careers">Careers</button><button class="nlink hide-sm" data-go="/ai">AI tools</button><button class="nlink hide-md" data-scroll="how">How it works</button><button class="nlink hide-md" data-scroll="plans">Plans</button><button class="nlink hide-md" data-scroll="feedback">Feedback</button><button class="nlink hide-md" data-scroll="ai">AI &amp; privacy</button><button class="nlink hide-md" data-go="/open">Open my result</button>`;
   const cta = `<button class="btn go sm" data-go="${done ? '/dashboard' : '/start'}">${done ? 'My dashboard' : 'Start the test'}</button>`;
   return `<header class="topnav">${brand()}<nav class="nlinks" aria-label="Site">${extra === undefined ? links + cta : extra}</nav></header>`;
 }
@@ -72,6 +72,7 @@ function shell(S, active, inner) {
     ['/careers', 'Explore careers', 'careers', 'grid'],
     ['/career/' + f, 'Career details', 'career', 'card'],
     ['/roadmap/' + f, 'My roadmap', 'roadmap', 'route'],
+    ['/ai', 'AI tools', 'ai', 'spark'],
   ];
   const side = items.map(([to, n, id, icon]) => `<button data-go="${to}" ${id === active ? 'aria-current="page"' : ''} ${id === 'results' && !S.result ? 'disabled' : ''}>${ic(icon, 20)}<span>${n}</span></button>`).join('')
     + `<button disabled>${ic('chart', 20)}<span>Market analytics</span><em>Soon</em></button>`
@@ -80,7 +81,7 @@ function shell(S, active, inner) {
   const who = S.name ? esc(S.name) : (S.result ? pathLabel(S.result.profile) : 'Guest');
   const initials = esc((S.name || who).trim().slice(0, 2).toUpperCase());
   const sub = S.result ? (modeOf(S.result.profile) === 'pro' ? 'Professional path' : (/^\d+$/.test(S.result.profile.grade) ? 'Grade ' + esc(S.result.profile.grade) : esc(S.result.profile.grade))) : 'No result yet';
-  const tabs = [['/dashboard', 'Home', 'dashboard', 'home'], ['/results', 'Matches', 'results', 'list'], ['/careers', 'Careers', 'careers', 'grid'], ['/roadmap/' + f, 'Roadmap', 'roadmap', 'route'], ['/privacy', 'Privacy', 'privacy', 'lock']]
+  const tabs = [['/dashboard', 'Home', 'dashboard', 'home'], ['/results', 'Matches', 'results', 'list'], ['/careers', 'Careers', 'careers', 'grid'], ['/roadmap/' + f, 'Roadmap', 'roadmap', 'route'], ['/ai', 'AI tools', 'ai', 'spark']]
     .map(([to, n, id, icon]) => `<button data-go="${to}" ${id === active ? 'aria-current="page"' : ''} ${id === 'results' && !S.result ? 'disabled' : ''}>${ic(icon, 20)}<span>${n}</span></button>`).join('');
   return `<div class="wrap"><div class="app"><aside class="side">${brand()}<nav aria-label="Main menu">${side}</nav><div class="me"><b>${initials}</b><span>${who}<small>${sub}</small></span></div></aside><main id="main"><div class="mtop">${brand()}</div>${inner}${footer()}</main></div></div>
   <nav class="tabbar" aria-label="Main menu">${tabs}</nav>`;
@@ -143,11 +144,11 @@ export function home(S) {
   <ol class="hsteps">${how(1, 'memo', 'Answer 30 statements', 'About your interests, plus your studies or work and the skills you have.')}${how(2, 'crystal-ball', 'Get your matches', `Your answers are compared with ${N_CAREERS} career profiles. The AI explains each match.`)}${how(3, 'bullseye', 'See why it fits', 'Every match shows the scores, skills and answers behind it.')}${how(4, 'puzzle-piece', 'Find your skill gap', 'See which skills you have and which ones to build next.')}${how(5, 'world-map', 'Follow your roadmap', 'One step for each missing skill, then a real project. Mark steps as done.')}</ol></section>
 
  <section class="sect" id="features"><span class="kicker">Features</span><h2>What you can use today</h2><p class="sub">Live means you can use it now. Coming soon means it is planned and clearly marked.</p>
-  <div class="feats">${feature('memo', 'AI Career Assessment', 'live', 'Top five careers with a match percentage and a reason for each.')}${feature('puzzle-piece', 'Skill-Gap Analysis', 'live', 'The skills you have and the ones you still need, in priority order.')}${feature('world-map', 'Personal Roadmap', 'live', 'A step-by-step route to the career you choose, with progress you can mark.')}${feature('chart-increasing', 'Market Analytics', 'soon', 'Salaries and demand in Kazakhstan. Every number will show its source and date.')}${feature('trophy', 'Quests &amp; Rewards', 'soon', 'Daily tasks linked to your roadmap, with streaks and badges.')}${feature('bar-chart', 'Weakness Analytics', 'soon', 'Practice quizzes that find the topics you need to work on.')}</div></section>
+  <div class="feats">${feature('memo', 'AI Career Assessment', 'live', 'Top five careers with a match percentage and a reason for each.')}${feature('puzzle-piece', 'Skill-Gap Analysis', 'live', 'The skills you have and the ones you still need, in priority order. An AI coach explains why each one matters.')}${feature('world-map', 'Personal Roadmap', 'live', 'A step-by-step route to the career you choose, with progress you can mark and an AI learning plan for each step.')}${feature('speech-balloon', 'AI Career Mentor', 'live', 'Ask questions about careers and studies and get simple answers with careers to explore.')}${feature('balance-scale', 'Career Comparison', 'live', 'Two careers side by side: daily work, skills, education, and which one fits you better.')}${feature('speaking-head', 'Interview Practice', 'live', 'Practice questions for a career, a score for your answer and tips to improve it.')}${feature('chart-increasing', 'Market Analytics', 'soon', 'Salaries and demand in Kazakhstan. Every number will show its source and date.')}${feature('trophy', 'Quests &amp; Rewards', 'soon', 'Daily tasks linked to your roadmap, with streaks and badges.')}${feature('bar-chart', 'Weakness Analytics', 'soon', 'Practice quizzes that find the topics you need to work on.')}</div></section>
 
  <section class="sect" id="ai"><span class="kicker">AI &amp; privacy</span><h2>Helpful, limited and under your control</h2>
   <div class="g3">
-   <article class="card icard">${pic('robot', 64)}<h3>What the AI does</h3><p>Your 30 answers become six interest scores. The AI reads them with your profile and skills, picks five careers from the best candidates and writes a short reason for each. It may move a match by at most 15 points.</p></article>
+   <article class="card icard">${pic('robot', 64)}<h3>What the AI does</h3><p>Your 30 answers become six interest scores. The AI reads them with your profile and skills, picks five careers from the best candidates and writes a short reason for each. It may move a match by at most 15 points. In the <button class="link" data-go="/ai">AI tools</button> it also coaches your skill gap, plans your learning, compares careers, answers questions and helps you practise interviews.</p></article>
    <article class="card icard">${pic('locked', 64)}<h3>What it never gets</h3><p>Your name, email and birth date are never asked for and never sent. An optional note has email addresses and phone numbers removed first, and it is not saved on our side.</p></article>
    <article class="card icard">${pic('key', 64)}<h3>What you control</h3><p>Switch the AI off and get matches from simple, open rules. Save your result under a private code only if you want to. Change your answers at any time.</p></article></div></section>
 
@@ -437,7 +438,7 @@ export function dashboard(S) {
     <div class="row"><button class="btn sm ghost" data-act="adjust">Retake or adjust</button></div></div></div>`);
 }
 
-export function career(S, id) {
+export function career(S, id, T) {
   const c = CAREER_BY_ID[id];
   if (!c) return null;
   const m = matchOf(S, id);
@@ -450,13 +451,14 @@ export function career(S, id) {
   return shell(S, 'career', `<button class="link back" data-go="${backTo[0]}">${ic('back', 18)} ${backTo[1]}</button>
   <section class="chead" style="${hueVars(c.field)}">${pic(c.img, 120, 'cpic')}<div><div class="chips mb"><button class="chip fieldchip" data-go="/careers?f=${c.field}">${pic(fld.img, 18)}${fld.name}</button>${m ? `<span class="chip">${m.match}% match</span>` : (S.result ? '<span class="chip dev">Not in your top five</span>' : '')}</div>
    <h1 class="title">${esc(c.name)}</h1><p class="sub">${esc(c.summary)}</p>
-   <div class="row"><button class="btn go" data-act="roadmapFor" data-id="${id}">Build my roadmap ${ARROW}</button>${m ? `<button class="btn ghost" data-go="/why/${id}">Why it fits</button>` : ''}</div></div></section>
+   <div class="row"><button class="btn go" data-act="roadmapFor" data-id="${id}">Build my roadmap ${ARROW}</button>${m ? `<button class="btn ghost" data-go="/why/${id}">Why it fits</button>` : ''}<button class="btn ghost" data-go="/interview/${id}">${ic('spark', 16)} Practise an interview</button><button class="btn ghost" data-go="/compare?a=${id}">${ic('spark', 16)} Compare</button></div></div></section>
   <div class="dgrid two-one">
    <div class="card"><h3>What the work looks like</h3><ul class="tl">${c.tasks.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>
    <div class="card soft"><h3>Market data · Kazakhstan</h3><span class="chip soon">Coming soon</span><p class="muted">Salaries, demand and requirements will appear here. We will show a number only when we have its source and the date it was checked.</p></div></div>
   <div class="card mt"><h3>Skill gap: you vs this career</h3><p class="muted">${S.result ? 'Green skills you already have. Orange skills are your next stops.' : 'Take the assessment to see which of these you already have.'}</p>
    <div class="skl">${have.map(s => `<span class="have">${esc(SKILLS[s].name)}</span>`).join('')}${need.map(s => `<span class="need">${esc(SKILLS[s].name)}</span>`).join('')}</div>
    ${S.result ? `<div class="gaplist">${gapRows(id, owned) || '<p class="muted">You already have every core skill listed. Nice.</p>'}</div>` : ''}</div>
+  ${gapCoach(S, T, id)}
   <div class="dgrid half"><div class="card">${pic('graduation-cap', 48)}<h3>Typical education</h3><p class="muted">${esc(c.education)}</p>${c.subjects.length ? `<div class="chips">${c.subjects.map(s => `<span class="chip dev">${esc(s)}</span>`).join('')}</div>` : ''}</div>
    <div class="card">${pic('glowing-star', 48)}<h3>A good first project</h3><p class="muted">${esc(c.first)}</p></div></div>
   ${more.length ? `<h2 class="h2">More in ${fld.name}</h2><div class="cgrid small">${more.map(x => `<button class="ccard" style="${hueVars(x.field)}" data-go="/career/${x.id}">${tile(x, 44)}<span class="cc"><b>${esc(x.name)}</b><span class="cs">${esc(x.summary)}</span></span></button>`).join('')}</div>` : ''}`);
@@ -478,7 +480,7 @@ export function roadmapSteps(S, id) {
 }
 const stateLabel = s => s.goal ? 'Destination' : s.state === 'done' ? (s.had ? 'You have it' : 'Done') : s.state === 'now' ? 'You are here' : 'Next';
 
-export function roadmap(S, id, sel) {
+export function roadmap(S, id, sel, T) {
   const c = CAREER_BY_ID[id];
   if (!c) return null;
   const steps = roadmapSteps(S, id);
@@ -494,7 +496,152 @@ export function roadmap(S, id, sel) {
    <p class="muted small">Your roadmap is rebuilt every time you retake the assessment.</p></div>
   <div class="rmdet"><div class="card"><span class="chip">${stateLabel(cur)}</span><h3 class="rmt">${esc(cur.title)}</h3><p class="muted">${esc(cur.d)}</p>
    ${canMark ? `<button class="btn ${cur.state === 'done' ? 'ghost' : 'go'}" data-act="mark" data-id="${cur.id}">${cur.state === 'done' ? 'Undo: mark as not done' : 'Mark as done ✓'}</button>` : ''}</div>
-   <div class="card soft"><h3>What is inside</h3><ul class="tl">${cur.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div></div>`);
+   <div class="card soft"><h3>What is inside</h3><ul class="tl">${cur.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div></div>
+  ${cur.goal ? '' : learnPlan(S, T, id, cur)}`);
+}
+
+/* ---------- AI tools ---------- */
+
+/** Owned skills as a short key: an AI answer is shown only for the skills it was made for. */
+export const skillSig = S => ownedSkills(S).slice().sort().join(',');
+export const aiReady = S => !!(S.consent.privacy && S.consent.ai);
+const AI_WARN = 'AI can make mistakes. Use the answer as a starting point and check important facts.';
+
+/** Shown instead of a working tool until the person has read the Privacy Notice and allowed the AI. */
+function aiGate(S) {
+  if (aiReady(S)) return '';
+  return `<div class="banner warn aigate"><span class="bi">${ic('lock', 20)}</span><div><b>Turn on AI to use this tool</b>Your question, ticked skills and interest scores are sent to OpenAI to write the answer. Your name and email are never sent, and nothing is saved on our side.
+   <div class="gatechecks">${S.consent.privacy ? '' : check('privacy', false, 'I have read the Privacy Notice', '')}${S.consent.ai ? '' : check('ai', false, 'Use AI', 'Send the data above to OpenAI when I press an AI button.')}</div>
+   <button class="link" data-go="/privacy">Open the Privacy Notice</button></div></div>`;
+}
+
+const aiBtn = (S, T, key, act, label, attrs = '', cls = 'go') => {
+  const busy = T.busy === key;
+  return `<button class="btn ${cls}" data-act="${act}" ${attrs} ${busy || !aiReady(S) || (T.busy && !busy) ? 'disabled' : ''}>${busy ? '<span class="spin"></span> AI is thinking…' : ic('spark', 16) + ' ' + label}</button>`;
+};
+const errLine = (T, key) => (T.err[key] ? `<p class="err" role="alert">${esc(T.err[key])}</p>` : '');
+
+const careerOptions = (selected, exclude) => FIELDS.map(f => `<optgroup label="${esc(f.name)}">${careersIn(f.id).map(c => `<option value="${c.id}" ${c.id === selected ? 'selected' : ''} ${c.id === exclude ? 'disabled' : ''}>${esc(c.name)}</option>`).join('')}</optgroup>`).join('');
+
+/** The AI skill-gap coach card, on the career page. */
+function gapCoach(S, T, id) {
+  const key = id + '|' + skillSig(S);
+  const d = T.gap[key];
+  const c = CAREER_BY_ID[id];
+  const body = d
+    ? `<div class="aires"><div class="aisum"><span class="chip ai">${ic('spark', 14)} AI skill-gap coach</span><p>${esc(d.summary)}</p></div>
+       ${d.steps.length ? `<ol class="aisteps">${d.steps.map(s => `<li><b>${esc(s.name)}</b><p>${esc(s.why)}</p><p><em>This week:</em> ${esc(s.first)}</p></li>`).join('')}</ol>` : ''}
+       <p class="muted small">${AI_WARN}</p></div>`
+    : `<div class="row">${aiBtn(S, T, 'gap:' + key, 'gapAi', 'Explain my gap with AI', `data-id="${id}"`)}</div>`;
+  return `<div class="card mt" id="gap-coach"><h3>${pic('puzzle-piece', 32)} AI skill-gap coach</h3><p class="muted">Why ${esc(c.name)} needs each skill you are missing, in which order to learn them, and one small step to start this week.</p>
+   ${aiGate(S)}${body}${errLine(T, 'gap:' + key)}</div>`;
+}
+
+/** The AI learning plan for one roadmap step. */
+function learnPlan(S, T, careerId, step) {
+  const key = careerId + ':' + step.id;
+  const d = T.learn[key];
+  if (!d) return `<div class="card mt"><h3>${pic('books', 32)} AI learning plan</h3><p class="muted">A short plan for “${esc(step.title)}”: what to learn in which order, what kind of course to look for and a practice task.</p>${aiGate(S)}
+   <div class="row">${aiBtn(S, T, 'learn:' + key, 'learnAi', 'Make my learning plan', `data-id="${esc(step.id)}"`)}</div>${errLine(T, 'learn:' + key)}</div>`;
+  return `<div class="card mt"><h3>${pic('books', 32)} AI learning plan: ${esc(step.title)}</h3>
+   <ol class="aisteps">${d.plan.map(p => `<li>${p.time ? `<span class="t">${esc(p.time)}</span>` : ''}<b>${esc(p.title)}</b><p>${esc(p.todo)}</p></li>`).join('')}</ol>
+   <div class="dgrid half lp">${d.types.length ? `<div><h4>What to look for</h4><div class="chips">${d.types.map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div></div>` : ''}
+    ${d.search.length ? `<div><h4>Search for</h4><div class="searchq">${d.search.map(s => `<code>${esc(s)}</code>`).join('')}</div></div>` : ''}</div>
+   ${d.practice ? `<div class="quote"><b>Practice task:</b> ${esc(d.practice)}</div>` : ''}${d.check ? `<div class="quote"><b>You know it when:</b> ${esc(d.check)}</div>` : ''}
+   <p class="muted small">We do not name courses or links: search for free lessons with the phrases above and choose a source you trust. ${AI_WARN}</p></div>`;
+}
+
+export function aiHub(S, T) {
+  const f = focusId(S), fc = CAREER_BY_ID[f];
+  const tool = (img, title, state, text, btn) => `<article class="card aitool">${pic(img, 64)}<span class="fstate ${state}">${state === 'live' ? 'Live' : 'Coming soon'}</span><h3>${title}</h3><p class="muted">${text}</p>${btn}</article>`;
+  return shell(S, 'ai', `<section class="chead slim">${pic('robot', 88, 'cpic')}<div><span class="kicker">${ic('spark', 14)} AI tools</span><h1 class="greet">Your AI career toolkit</h1>
+   <p class="sub">Six tools that use AI. ${S.result ? `They know your path and your focus career, <b>${esc(fc.name)}</b>.` : 'Take the assessment first and they will also know your interests and skills.'}</p></div></section>
+   ${aiGate(S)}
+   <div class="aitools">
+    ${tool('memo', 'AI career matching', 'live', 'Your 30 answers become six interest scores. The AI picks your top five careers and explains each one.', `<button class="btn ghost" data-go="${S.result ? '/results' : '/start'}">${S.result ? 'My matches' : 'Take the assessment'}</button>`)}
+    ${tool('puzzle-piece', 'AI skill-gap coach', 'live', 'Why each missing skill matters for a career, the order to learn them and one step for this week.', `<button class="btn ghost" data-go="/career/${f}">Open for ${esc(fc.name)}</button>`)}
+    ${tool('books', 'AI learning plan', 'live', 'For any roadmap step: what to learn in which order, what kind of course to look for, and a practice task.', `<button class="btn ghost" data-go="/roadmap/${f}">Open my roadmap</button>`)}
+    ${tool('balance-scale', 'Compare two careers', 'live', 'Daily work, skills, education and interests side by side, and which one fits you better.', '<button class="btn ghost" data-go="/compare">Compare careers</button>')}
+    ${tool('speech-balloon', 'AI career mentor', 'live', 'Ask any question about careers and studies. It answers in simple English and suggests careers to open.', '<button class="btn ghost" data-go="/mentor">Ask the mentor</button>')}
+    ${tool('speaking-head', 'Interview practice', 'live', 'Five practice questions for a career. Write your answer and get a score with tips.', `<button class="btn ghost" data-go="/interview/${f}">Practise for ${esc(fc.name)}</button>`)}
+   </div>
+   <div class="card mt"><h3>How every AI tool works</h3>
+    <div class="aiflow"><span>You press an AI button</span><i>→</i><span>Our server checks the request and removes emails and phone numbers</span><i>→</i><span>OpenAI writes the answer in a fixed format</span><i>→</i><span>Our server checks the answer</span><i>→</i><span>You see it</span></div>
+    <ul class="tl"><li>The AI gets only our career data and what you choose to share: path, ticked skills, interest scores, your question.</li><li>It never gets your name, email or birth date. Nothing from the AI tools is saved on our side.</li><li>Careers and skills must come from our catalogue, and links are removed. No salaries or statistics are invented.</li><li>Limit: 30 AI requests per 10 minutes, so nobody can waste the AI budget.</li></ul></div>`);
+}
+
+export function compare(S, T) {
+  const { a, b } = T.cmp;
+  const ca = CAREER_BY_ID[a], cb = CAREER_BY_ID[b];
+  const key = a + '|' + b;
+  const d = T.compare[key];
+  const mA = matchOf(S, a), mB = matchOf(S, b);
+  const head = (c, m) => `<span class="cmphead" style="${hueVars(c.field)}">${pic(c.img, 32)}<span><b>${esc(c.name)}</b><small>${FIELD_BY_ID[c.field].name}${m ? ` · ${m.match}% match` : ''}</small></span></span>`;
+  const res = d ? `<div class="card mt"><div class="aisum"><span class="chip ai">${ic('spark', 14)} AI comparison</span><p>${esc(d.summary)}</p></div>
+    <div class="tablewrap"><table class="cmptab"><thead><tr><th></th><th>${head(ca, mA)}</th><th>${head(cb, mB)}</th></tr></thead>
+    <tbody>${d.rows.map(r => `<tr><th scope="row">${esc(r.aspect)}</th><td>${esc(r.a)}</td><td>${esc(r.b)}</td></tr>`).join('')}</tbody></table></div>
+    ${d.fit ? `<div class="quote"><b>For you:</b> ${esc(d.fit)}</div>` : ''}<p class="muted small">${AI_WARN}</p>
+    <div class="row"><button class="btn sm ghost" data-go="/career/${a}">Open ${esc(ca.name)}</button><button class="btn sm ghost" data-go="/career/${b}">Open ${esc(cb.name)}</button></div></div>` : '';
+  const quick = S.result ? `<div class="chips mb" role="group" aria-label="Your matches">${S.result.matches.map(m => `<span class="chip dev">${esc(CAREER_BY_ID[m.id].name)} ${m.match}%</span>`).join('')}</div>` : '';
+  return shell(S, 'ai', `<button class="link back" data-go="/ai">${ic('back', 18)} AI tools</button>
+   <section class="chead slim">${pic('balance-scale', 88, 'cpic')}<div><h1 class="greet">Compare two careers</h1><p class="sub">Choose two careers. The AI compares them side by side${S.result ? ' and says which one fits your scores and skills better' : ''}.</p></div></section>
+   ${aiGate(S)}
+   <div class="card">${quick}<div class="cmpsel">
+    <div class="field"><label for="f-cmpa">Career A</label><select id="f-cmpa" data-f="cmpA">${careerOptions(a, b)}</select></div>
+    <button class="btn sm ghost" data-act="cmpSwap" aria-label="Swap the two careers">⇄</button>
+    <div class="field"><label for="f-cmpb">Career B</label><select id="f-cmpb" data-f="cmpB">${careerOptions(b, a)}</select></div></div>
+    <div class="row">${aiBtn(S, T, 'cmp:' + key, 'cmpRun', d ? 'Compare again' : 'Compare with AI')}</div>${errLine(T, 'cmp:' + key)}</div>
+   ${res}`);
+}
+
+export function mentor(S, T) {
+  const f = S.result ? focusId(S) : null;
+  const fc = f && CAREER_BY_ID[f];
+  const ideas = [
+    fc ? `What should I learn first to become a ${fc.name}?` : 'How can I start in IT without experience?',
+    'What does a data analyst do every day?',
+    'Which school subjects matter for medicine?',
+    'I am 30 and want to change my career. Where do I start?',
+  ];
+  const log = T.chat.map(m => m.role === 'user'
+    ? `<div class="msg me">${esc(m.text)}</div>`
+    : `<div class="msg ai">${esc(m.text)}${m.careers && m.careers.length ? `<div class="chips">${m.careers.map(id => `<button class="chip" data-go="/career/${id}">${pic(CAREER_BY_ID[id].img, 18)}${esc(CAREER_BY_ID[id].name)}</button>`).join('')}</div>` : ''}</div>`).join('')
+    + (T.busy === 'chat' ? '<div class="msg ai"><span class="spin"></span> The mentor is thinking…</div>' : '');
+  const empty = `<div class="chatempty">${pic('speech-balloon', 64)}<p><b>Ask anything about careers and studies.</b> For example:</p>
+    <div class="chips">${ideas.map(q => `<button class="toggle" data-act="chatAsk" data-q="${esc(q)}" ${aiReady(S) && !T.busy ? '' : 'disabled'}>${esc(q)}</button>`).join('')}</div></div>`;
+  return shell(S, 'ai', `<button class="link back" data-go="/ai">${ic('back', 18)} AI tools</button>
+   <section class="chead slim">${pic('speech-balloon', 88, 'cpic')}<div><h1 class="greet">AI career mentor</h1>
+    <p class="sub">${fc ? `The mentor knows your path, skills, interest scores and your focus career, <b>${esc(fc.name)}</b>.` : 'Take the assessment so the mentor also knows your interests and skills.'} It talks only about careers and studies.</p></div></section>
+   ${aiGate(S)}
+   <div class="card"><div class="chatbox" id="chatbox" aria-live="polite">${T.chat.length ? log : empty}</div>
+    ${errLine(T, 'chat')}
+    <form class="chatform" data-form="mentor"><label class="sr" for="f-chat">Your question</label>
+     <textarea id="f-chat" data-f="chatDraft" maxlength="300" rows="2" placeholder="Type your question. Do not write your name or contact details." ${aiReady(S) ? '' : 'disabled'}>${esc(T.chatDraft)}</textarea>
+     <button class="btn go" type="submit" ${aiReady(S) && !T.busy ? '' : 'disabled'}>Send</button></form>
+    <div class="row"><span class="muted small">Press Enter to send, Shift+Enter for a new line. ${AI_WARN}</span>${T.chat.length ? '<button class="link" data-act="chatClear">New chat</button>' : ''}</div></div>`);
+}
+
+export function interview(S, T, id) {
+  const c = CAREER_BY_ID[id];
+  if (!c) return null;
+  const d = T.iv[id];
+  const qs = d ? `<ol class="ivq">${d.questions.map((q, i) => {
+    const k = id + ':' + i;
+    const a = T.ans[k];
+    const dots = a ? `<span class="score" role="img" aria-label="Score ${a.fb.score} of 5">${[1, 2, 3, 4, 5].map(n => `<i class="${n <= a.fb.score ? 'on' : ''}"></i>`).join('')}</span>` : '';
+    return `<li><h4>${i + 1}. ${esc(q.q)}</h4><details><summary>Why they ask and a tip</summary><p class="muted small">${esc(q.why)}</p><p class="small"><b>Tip:</b> ${esc(q.tip)}</p></details>
+     <form class="chatform" data-form="iv-answer" data-id="${id}" data-i="${i}"><label class="sr" for="f-iv${i}">Your answer</label>
+      <textarea id="f-iv${i}" data-f="ivDraft" data-k="${k}" maxlength="800" rows="3" placeholder="Write your answer as you would say it" ${aiReady(S) ? '' : 'disabled'}>${esc(T.draft[k] || '')}</textarea>
+      <button class="btn ${a ? 'ghost' : 'go'}" type="submit" ${aiReady(S) && !T.busy ? '' : 'disabled'}>${T.busy === 'ans:' + k ? '<span class="spin"></span> Checking…' : a ? 'Check again' : 'Check my answer'}</button></form>
+     ${errLine(T, 'ans:' + k)}
+     ${a ? `<div class="fbk"><div class="fbh"><b>AI feedback</b>${dots}<span class="muted small">${a.fb.score} of 5</span></div>${a.fb.good ? `<p><b>Good:</b> ${esc(a.fb.good)}</p>` : ''}${a.fb.improve ? `<p><b>Improve:</b> ${esc(a.fb.improve)}</p>` : ''}${a.fb.example ? `<p><b>A stronger answer:</b> ${esc(a.fb.example)}</p>` : ''}</div>` : ''}</li>`;
+  }).join('')}</ol><p class="muted small">${AI_WARN} Your answers are not saved.</p>` : '';
+  return shell(S, 'ai', `<button class="link back" data-go="/ai">${ic('back', 18)} AI tools</button>
+   <section class="chead slim" style="${hueVars(c.field)}">${pic('speaking-head', 88, 'cpic')}<div><h1 class="greet">Interview practice</h1>
+    <p class="sub">${S.result && modeOf(S.result.profile) === 'pro' ? 'Questions for someone moving into this career.' : 'Questions for an internship or a first job.'} Answer in writing and get a score with tips.</p></div></section>
+   ${aiGate(S)}
+   <div class="card"><div class="field"><label for="f-iv">Career</label><select id="f-iv" data-f="ivCareer">${careerOptions(id)}</select></div>
+    <div class="row">${aiBtn(S, T, 'iv:' + id, 'ivGen', d ? 'New questions' : 'Get 5 practice questions', `data-id="${id}"`, d ? 'ghost' : 'go')}</div>${errLine(T, 'iv:' + id)}${qs}</div>`);
 }
 
 /* ---------- open by code, privacy ---------- */
@@ -520,6 +667,7 @@ export function privacy() {
    <tr><td>Your progress, answers and result</td><td>Your own browser (local storage)</td><td>Until you clear it</td></tr>
    <tr><td>Your 30 answers and profile (year and subjects, or field, experience, education and goal) and skills</td><td>Our server, to calculate your matches. The server keeps nothing unless you choose to save the result.</td><td>Each time you get matches</td></tr>
    <tr><td>Six interest scores, profile, skills and the optional note</td><td>OpenAI, to write the explanations</td><td>Only if “Use AI” is on. The note has emails and phone numbers removed first.</td></tr>
+   <tr><td>AI tools: your question or interview answer, your path, ticked skills and interest scores</td><td>OpenAI, to write the answer. Cognita does not save it.</td><td>Only when “Use AI” is on and you press an AI button. Emails and phone numbers are removed first.</td></tr>
    <tr><td>Your 30 answers, scores, profile, skills and matches (never the note or your name)</td><td>A private Notion database kept by the Cognita team, under a random result code</td><td>Only if “Save my result” is on</td></tr>
    <tr><td>Feedback rating and comment</td><td>The same Notion workspace</td><td>Only when you press a feedback button. Do not write personal data in comments.</td></tr></tbody></table></div>
   <h2>OpenAI</h2><p>When the AI is on, OpenAI processes the data listed above under <a href="https://openai.com/policies/privacy-policy/" target="_blank" rel="noopener noreferrer">its own privacy policy</a>. If you switch the AI off, nothing is sent to OpenAI and matches are calculated by simple rules on our server (or on your device if the server cannot be reached).</p>

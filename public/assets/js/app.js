@@ -34,6 +34,22 @@ const ex = { q: '', f: '' };   // careers explorer: search text and field filter
 let advance = 0;      // timer for auto-advance on the test screen
 let pendingAt = -1;   // statement that is waiting for that timer, or -1
 
+// AI tools. Answers live only in memory (not in localStorage): they are not saved anywhere.
+const T = {
+  busy: null,          // key of the AI request that is running, or null (one at a time)
+  err: {},             // key -> error message
+  gap: {},             // 'careerId|skills' -> skill-gap coach answer
+  learn: {},           // 'careerId:stepId' -> learning plan
+  cmp: { a: '', b: '' },
+  compare: {},         // 'a|b' -> comparison
+  chat: [],            // [{ role: 'user'|'assistant', text, careers? }]
+  chatDraft: '',
+  iv: {},              // careerId -> { questions }
+  ans: {},             // 'careerId:i' -> { text, fb }
+  draft: {},           // 'careerId:i' -> answer being typed
+};
+const AI_SCREENS = new Set(['career', 'roadmap', 'ai', 'mentor', 'compare', 'interview']);
+
 /* ---------- small helpers ---------- */
 
 function toast(msg) {
@@ -83,9 +99,10 @@ function titleFor(name, arg) {
     home: 'Cognita: AI career navigation', start: 'Get started', type: 'Your path', profile: 'Your profile', careers: 'Explore careers',
     test: 'Assessment', analysis: 'Analysing your answers', delay: 'The AI is taking longer than usual', results: 'Your career matches',
     dashboard: 'Dashboard', roadmap: 'My roadmap', open: 'Open a saved result', privacy: 'Privacy Notice', career: 'Career details', why: 'Why it fits',
+    ai: 'AI tools', mentor: 'AI career mentor', compare: 'Compare careers', interview: 'Interview practice',
   }[name] || 'Page not found';
   const c = arg && CAREER_BY_ID[arg];
-  const label = (name === 'career' || name === 'why' || name === 'roadmap') && c ? `${t}: ${c.name}` : t;
+  const label = (name === 'career' || name === 'why' || name === 'roadmap' || name === 'interview') && c ? `${t}: ${c.name}` : t;
   return name === 'home' ? label : `${label} · Cognita`;
 }
 
@@ -102,8 +119,12 @@ function view(name, arg, q) {
     case 'results': return V.results(S);
     case 'why': return V.why(S, arg);
     case 'dashboard': return V.dashboard(S);
-    case 'career': return V.career(S, arg);
-    case 'roadmap': return V.roadmap(S, arg || V.focusId(S), sel);
+    case 'career': return V.career(S, arg, T);
+    case 'roadmap': return V.roadmap(S, arg || V.focusId(S), sel, T);
+    case 'ai': return V.aiHub(S, T);
+    case 'mentor': return V.mentor(S, T);
+    case 'compare': return V.compare(S, T);
+    case 'interview': return V.interview(S, T, arg || V.focusId(S));
     case 'open': return V.open(S, openMsg, openBusy);
     case 'privacy': return V.privacy();
     default: return null;
@@ -131,6 +152,8 @@ function render(fresh = true) {
   if (fresh) sel = name === 'roadmap' ? q.get('s') : null;
   if (name === 'career' && !CAREER_BY_ID[arg]) arg = null;
   if (name === 'roadmap' && arg && !CAREER_BY_ID[arg]) arg = null;
+  if (name === 'interview' && arg && !CAREER_BY_ID[arg]) arg = null;
+  if (name === 'compare') setCompare(fresh ? q.get('a') : null, fresh ? q.get('b') : null);
   if (name === 'roadmap' && !arg && !fresh) arg = V.focusId(S);
 
   if (name === 'test' && fresh) {
@@ -149,7 +172,7 @@ function render(fresh = true) {
 
   const y = fresh ? 0 : window.scrollY;
   document.body.dataset.screen = screen;
-  document.body.classList.toggle('hastab', ['dashboard', 'career', 'roadmap'].includes(screen));
+  document.body.classList.toggle('hastab', ['dashboard', 'career', 'roadmap', 'ai', 'mentor', 'compare', 'interview'].includes(screen));
   document.title = titleFor(screen === 'notfound' ? 'x' : name, arg);
   app.innerHTML = html;
   window.scrollTo(0, y);
@@ -274,9 +297,82 @@ async function submitCode(text) {
   }
 }
 
+/* ---------- AI tools ---------- */
+
+/** What the AI tools may know about the person: path, ticked skills and (after the test) interest scores. */
+function personCtx() {
+  const r = S.result;
+  const p = r ? r.profile : profileInput();
+  return r ? { mode: modeOf(p), skills: p.skills.slice(), areas: r.areas } : { mode: modeOf(p), skills: p.skills.slice() };
+}
+
+/** Pick the two careers to compare: from the address, then the top matches, then the first careers. */
+function setCompare(a, b) {
+  const ids = (S.result ? S.result.matches.map(m => m.id) : []).concat(['software-engineer', 'data-analyst']);
+  if (CAREER_BY_ID[a]) T.cmp.a = a;
+  if (CAREER_BY_ID[b]) T.cmp.b = b;
+  if (!CAREER_BY_ID[T.cmp.a]) T.cmp.a = V.focusId(S);
+  if (!CAREER_BY_ID[T.cmp.b] || T.cmp.b === T.cmp.a) T.cmp.b = ids.find(id => id !== T.cmp.a && CAREER_BY_ID[id]);
+}
+
+const rerender = () => { if (AI_SCREENS.has(route().parts[0])) refresh(); };
+
+/** Run one AI request. Only one at a time; the answer is kept in memory under its key. */
+async function runAssist(key, body, keep) {
+  if (T.busy) return false;
+  if (!V.aiReady(S)) { toast('Turn on AI first.'); return false; }
+  T.busy = key; delete T.err[key]; rerender();
+  let ok = false;
+  try { const res = await api.assist(body); keep(res.data); ok = true; }
+  catch (e) { T.err[key] = e.status === 0 ? 'Could not reach the server. Check your connection and try again.' : e.message; }
+  finally { T.busy = null; rerender(); }
+  return ok;
+}
+
+async function sendChat(text) {
+  const msg = String(text || '').trim().slice(0, 300);
+  if (!msg || T.busy) return;
+  const history = T.chat.slice(-6).map(m => ({ role: m.role, text: m.text.slice(0, 600) }));
+  T.chat.push({ role: 'user', text: msg });
+  T.chatDraft = '';
+  const ok = await runAssist('chat', { kind: 'chat', message: msg, history, career: S.result ? V.focusId(S) : '', person: personCtx() },
+    d => T.chat.push({ role: 'assistant', text: d.answer, careers: d.careers }));
+  if (!ok) { if (T.chat.length && T.chat[T.chat.length - 1].role === 'user') T.chat.pop(); T.chatDraft = msg; rerender(); }
+  const box = document.getElementById('chatbox');
+  if (box) box.scrollTop = box.scrollHeight;
+  const input = document.getElementById('f-chat');
+  if (input && ok) input.focus({ preventScroll: true });
+}
+
 /* ---------- actions ---------- */
 
 const ACTIONS = {
+  gapAi(el) {
+    const id = el.dataset.id;
+    const key = id + '|' + V.skillSig(S);
+    runAssist('gap:' + key, { kind: 'gap', career: id, person: personCtx() }, d => { T.gap[key] = d; });
+  },
+  learnAi(el) {
+    const id = V.focusId(S), step = el.dataset.id;
+    const key = id + ':' + step;
+    runAssist('learn:' + key, { kind: 'learn', career: id, step, person: personCtx() }, d => { T.learn[key] = d; });
+  },
+  cmpSwap() { [T.cmp.a, T.cmp.b] = [T.cmp.b, T.cmp.a]; refresh(); },
+  cmpRun() {
+    const { a, b } = T.cmp;
+    if (a === b) { toast('Choose two different careers.'); return; }
+    const key = a + '|' + b;
+    runAssist('cmp:' + key, { kind: 'compare', a, b, person: personCtx() }, d => { T.compare[key] = d; });
+  },
+  chatAsk(el) { sendChat(el.dataset.q); },
+  chatClear() { T.chat = []; T.chatDraft = ''; delete T.err.chat; refresh('#f-chat'); },
+  ivGen(el) {
+    const id = el.dataset.id;
+    runAssist('iv:' + id, { kind: 'interview', career: id, person: personCtx() }, d => {
+      T.iv[id] = d;
+      d.questions.forEach((_, i) => { delete T.ans[id + ':' + i]; delete T.draft[id + ':' + i]; });
+    });
+  },
   consent(el) {
     const k = el.dataset.k;
     S.consent[k] = !S.consent[k];
@@ -432,6 +528,15 @@ function onField(e) {
   if (t.dataset.f === 'name') S.name = t.value.slice(0, 30);
   else if (t.dataset.f === 'grade') S.profile.grade = t.value;
   else if (['field', 'exp', 'edu'].includes(t.dataset.f)) S.profile[t.dataset.f] = t.value;
+  else if (t.dataset.f === 'chatDraft') { T.chatDraft = t.value.slice(0, 300); return; }
+  else if (t.dataset.f === 'ivDraft') { T.draft[t.dataset.k] = t.value.slice(0, 800); return; }
+  else if (t.dataset.f === 'cmpA' || t.dataset.f === 'cmpB') {
+    if (e.type !== 'change' || !CAREER_BY_ID[t.value]) return;
+    T.cmp[t.dataset.f === 'cmpA' ? 'a' : 'b'] = t.value;
+    refresh('#' + t.id);
+    return;
+  }
+  else if (t.dataset.f === 'ivCareer') { if (e.type === 'change' && CAREER_BY_ID[t.value]) go('/interview/' + t.value); return; }
   else if (t.dataset.f === 'search') {
     ex.q = t.value.slice(0, 60);
     const grid = document.getElementById('cgrid');
@@ -449,6 +554,24 @@ document.addEventListener('input', onField);
 document.addEventListener('change', onField);
 
 document.addEventListener('submit', async e => {
+  const formType = e.target.dataset && e.target.dataset.form;
+  if (formType === 'mentor') {
+    e.preventDefault();
+    sendChat(e.target.querySelector('textarea').value);
+    return;
+  }
+  if (formType === 'iv-answer') {
+    e.preventDefault();
+    const id = e.target.dataset.id, i = Number(e.target.dataset.i);
+    const q = T.iv[id] && T.iv[id].questions[i];
+    const text = e.target.querySelector('textarea').value.trim().slice(0, 800);
+    if (!q) return;
+    if (text.length < 3) { toast('Write your answer first.'); return; }
+    const k = id + ':' + i;
+    T.draft[k] = text;
+    runAssist('ans:' + k, { kind: 'answer', career: id, question: q.q, answer: text }, d => { T.ans[k] = { text, fb: d }; });
+    return;
+  }
   if (e.target.dataset && e.target.dataset.form === 'code') {
     e.preventDefault();
     const v = e.target.querySelector('input').value;
@@ -475,6 +598,13 @@ document.addEventListener('submit', async e => {
       button.textContent = 'Send feedback';
     }
   }
+});
+
+// AI mentor: Enter sends the question, Shift+Enter makes a new line.
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.shiftKey || e.isComposing || !e.target.dataset || e.target.dataset.f !== 'chatDraft') return;
+  e.preventDefault();
+  sendChat(e.target.value);
 });
 
 document.addEventListener('keydown', e => {

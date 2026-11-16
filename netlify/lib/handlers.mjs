@@ -3,7 +3,8 @@
 
 import { CAREER_BY_ID } from '../../public/shared/careers.mjs';
 import { LIMITS } from '../../public/shared/config.mjs';
-import { validateInput, scoreAreas, rankCareers, aiPayload, sanitizeAi, aiResult, rulesResult, looksLikeResult } from '../../public/shared/engine.mjs';
+import { validateInput, scoreAreas, rankCareers, aiPayload, sanitizeAi, aiResult, rulesResult, looksLikeResult, skillGap } from '../../public/shared/engine.mjs';
+import { validateAssist, buildAssist, sanitizeAssist } from './assist.mjs';
 import { json, fail, readJson, rateLimit, clientIp, sameOrigin, fetchTimeout } from './http.mjs';
 import { askOpenAI, DEFAULT_MODEL } from './openai.mjs';
 import { notionReady, saveResult, loadResult, saveFeedback, CODE_RE } from './notion.mjs';
@@ -94,6 +95,40 @@ export async function handleFeedback(req, env, fetchFn) {
   if (!notionReady(env)) return fail(503, 'Feedback is not available on this site yet.');
   try { await saveFeedback(env, fetchFn, { code, rating, career, comment }); return json({ ok: true }); }
   catch (e) { console.warn('[feedback] Notion save failed:', e.message); return fail(502, 'Could not send feedback. Try again later.'); }
+}
+
+/**
+ * POST /api/assist { kind, ... } -> { kind, data }
+ * The five AI tools (skill-gap coach, career comparison, mentor chat, learning plan, interview practice).
+ * Nothing is saved. Without a working AI the tool says so: these tools have no rule-based version.
+ */
+export async function handleAssist(req, env, fetchFn) {
+  if (req.method !== 'POST') return fail(405, 'Use POST.');
+  const blocked = guard(req, env, 'assist', 30);
+  if (blocked) return blocked;
+  let body;
+  try { body = await readJson(req, 12000); } catch (e) { return fail(e.status || 400, e.message); }
+  const v = validateAssist(body);
+  if (!v.ok) return fail(400, v.error);
+  const input = v.value;
+
+  // Nothing to coach: every core skill is already ticked.
+  if (input.kind === 'gap' && !skillGap(input.career, input.person ? input.person.skills : []).length)
+    return json({ ok: true, kind: 'gap', data: { summary: 'You already have every core skill of this career. Your next step is a first real project.', steps: [] } });
+
+  if (!env.OPENAI_API_KEY) return fail(503, 'AI tools are not available on this site right now.');
+  const built = buildAssist(input);
+  try {
+    const raw = await askOpenAI(env, fetchFn, built.payload, built);
+    const data = sanitizeAssist(input, raw, built);
+    if (!data) return fail(502, 'The AI answer could not be used. Please try again.');
+    return json({ ok: true, kind: input.kind, data });
+  } catch (e) {
+    console.warn('[assist] AI failed:', input.kind, e.aiStatus || 'error', e.message);
+    return e.aiStatus === 'timeout'
+      ? fail(504, 'The AI is taking too long. Please try again.')
+      : fail(502, 'The AI could not answer right now. Please try again.');
+  }
 }
 
 /**

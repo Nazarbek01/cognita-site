@@ -49,20 +49,21 @@ const tagged = (code, message) => Object.assign(new Error(message), { aiStatus: 
 /**
  * @param {object} env     process.env (needs OPENAI_API_KEY; optional OPENAI_MODEL, OPENAI_BASE_URL, AI_TIMEOUT_MS)
  * @param {Function} fetchFn fetch
- * @param {object} payload the student's data and the careers (see aiPayload in engine.mjs)
+ * @param {object} payload the person's data and the careers (see aiPayload in engine.mjs)
+ * @param {object} [spec]  another task: { system, schema, name, maxTokens }. Default: the career matching task.
  */
-export async function askOpenAI(env, fetchFn, payload) {
+export async function askOpenAI(env, fetchFn, payload, spec = {}) {
   const key = env.OPENAI_API_KEY;
   if (!key) throw tagged('no_key', 'OPENAI_API_KEY is not set.');
   const base = (env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
   const body = {
     model: env.OPENAI_MODEL || DEFAULT_MODEL,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: spec.system || SYSTEM_PROMPT },
       { role: 'user', content: JSON.stringify(payload) },
     ],
-    response_format: { type: 'json_schema', json_schema: { name: 'career_matches', strict: true, schema: RESPONSE_SCHEMA } },
-    max_completion_tokens: 1500,
+    response_format: { type: 'json_schema', json_schema: { name: spec.name || 'career_matches', strict: true, schema: spec.schema || RESPONSE_SCHEMA } },
+    max_completion_tokens: spec.maxTokens || 1500,
   };
   let res;
   try {

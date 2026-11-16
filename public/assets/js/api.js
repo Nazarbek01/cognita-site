@@ -24,3 +24,4 @@ async function call(path, init, ms) {
 export const match = body => call('/api/match', { method: 'POST', body: JSON.stringify(body) }, 40000);
 export const loadResult = code => call('/api/result?code=' + encodeURIComponent(code), { method: 'GET' }, 15000);
 export const sendFeedback = body => call('/api/feedback', { method: 'POST', body: JSON.stringify(body) }, 15000);
+export const assist = body => call('/api/assist', { method: 'POST', body: JSON.stringify(body) }, 45000);
